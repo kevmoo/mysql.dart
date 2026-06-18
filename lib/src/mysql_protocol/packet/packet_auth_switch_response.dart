@@ -24,6 +24,21 @@ class MySQLPacketAuthSwitchResponse extends MySQLPacketPayload {
     return MySQLPacketAuthSwitchResponse(authData: authData);
   }
 
+  factory MySQLPacketAuthSwitchResponse.createWithCachingSha2Password({
+    required String password,
+    required Uint8List challenge,
+  }) {
+    assert(challenge.length == 20);
+    final passwordBytes = utf8.encode(password);
+
+    final authData = xor(
+      sha256(passwordBytes),
+      sha256(sha256(sha256(passwordBytes)) + challenge),
+    );
+
+    return MySQLPacketAuthSwitchResponse(authData: authData);
+  }
+
   @override
   Uint8List encode() {
     final buffer = ByteDataWriter(endian: Endian.little);

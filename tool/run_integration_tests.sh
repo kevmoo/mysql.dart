@@ -20,7 +20,7 @@ docker run --name "${CONTAINER_NAME}" \
   -e MYSQL_RANDOM_ROOT_PASSWORD=yes \
   -v /tmp:/var/run/mysqld \
   -p 3306:3306 \
-  -d mysql:8.0 --default-authentication-plugin=mysql_native_password
+  -d mysql:8.0
 
 # Function to clean up on exit
 cleanup() {

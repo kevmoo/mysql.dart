@@ -203,6 +203,21 @@ class MySQLConnection {
 
             _socket.add(responsePacket.encode());
             return;
+          case 'caching_sha2_password':
+          case 'sha256_password':
+            final responsePayload =
+                MySQLPacketAuthSwitchResponse.createWithCachingSha2Password(
+                  password: _password,
+                  challenge: payload.authPluginData.sublist(0, 20),
+                );
+            final responsePacket = MySQLPacket(
+              sequenceID: authSwitchPacket.sequenceID + 1,
+              payload: responsePayload,
+              payloadLength: 0,
+            );
+
+            _socket.add(responsePacket.encode());
+            return;
           default:
             throw MySQLClientException(
               'Unsupported auth plugin name: ${payload.authPluginName}',
@@ -223,15 +238,16 @@ class MySQLConnection {
       if (packet.payload is MySQLPacketExtraAuthData) {
         assert(_activeAuthPluginName != null);
 
-        if (_activeAuthPluginName != 'caching_sha2_password') {
+        if (_activeAuthPluginName != 'caching_sha2_password' &&
+            _activeAuthPluginName != 'sha256_password') {
           throw MySQLClientException(
             'Unexpected auth plugin name $_activeAuthPluginName, while receiving MySQLPacketExtraAuthData packet',
           );
         }
 
         if (_secure == false) {
-          throw const MySQLClientException(
-            'Auth plugin caching_sha2_password is supported only with secure connections. Pass secure: true or use another auth method',
+          throw MySQLClientException(
+            'Auth plugin $_activeAuthPluginName is supported only with secure connections. Pass secure: true or use another auth method',
           );
         }
 
