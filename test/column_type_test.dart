@@ -5,15 +5,20 @@ void main() {
   test('testing decimal type', () {
     final sqlType = MySQLColumnType.decimalType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>('10.00');
-    result = sqlType.convertStringValueToProvidedType<String>('-10.00');
-    expect(result, '-10.00');
-    result = sqlType.convertStringValueToProvidedType<String>('0');
-    expect(result, '0');
-    result = sqlType.convertStringValueToProvidedType<String>('9999.99');
-    expect(result, '9999.99');
-    result = sqlType.convertStringValueToProvidedType<String>('1000123');
-    expect(result, '1000123');
+    expect(sqlType.convertStringValueToProvidedType<String>('10.00'), '10.00');
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('-10.00'),
+      '-10.00',
+    );
+    expect(sqlType.convertStringValueToProvidedType<String>('0'), '0');
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('9999.99'),
+      '9999.99',
+    );
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('1000123'),
+      '1000123',
+    );
 
     expect(
       () => sqlType.convertStringValueToProvidedType<bool>('10.00'),
@@ -39,24 +44,15 @@ void main() {
   test('testing tiny type', () {
     final sqlType = MySQLColumnType.tinyType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<bool>('1', 1);
-    expect(result, true);
-    result = sqlType.convertStringValueToProvidedType<bool>('0', 1);
-    expect(result, false);
-    result = sqlType.convertStringValueToProvidedType<bool>('10', 1);
-    expect(result, true);
-    result = sqlType.convertStringValueToProvidedType<int>('1', 1);
-    expect(result, 1);
-    result = sqlType.convertStringValueToProvidedType<int>('0', 1);
-    expect(result, 0);
-    result = sqlType.convertStringValueToProvidedType<int>('2', 1);
-    expect(result, 2);
-    result = sqlType.convertStringValueToProvidedType<double>('10', 1);
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<num>('10', 1);
-    expect(result, 10);
-    result = sqlType.convertStringValueToProvidedType<String>('10', 1);
-    expect(result, '10');
+    expect(sqlType.convertStringValueToProvidedType<bool>('1', 1), true);
+    expect(sqlType.convertStringValueToProvidedType<bool>('0', 1), false);
+    expect(sqlType.convertStringValueToProvidedType<bool>('10', 1), true);
+    expect(sqlType.convertStringValueToProvidedType<int>('1', 1), 1);
+    expect(sqlType.convertStringValueToProvidedType<int>('0', 1), 0);
+    expect(sqlType.convertStringValueToProvidedType<int>('2', 1), 2);
+    expect(sqlType.convertStringValueToProvidedType<double>('10', 1), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<num>('10', 1), 10);
+    expect(sqlType.convertStringValueToProvidedType<String>('10', 1), '10');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<bool>('1', 2),
@@ -67,18 +63,12 @@ void main() {
   test('testing short type', () {
     final sqlType = MySQLColumnType.shortType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<int>('1');
-    expect(result, 1);
-    result = sqlType.convertStringValueToProvidedType<int>('0');
-    expect(result, 0);
-    result = sqlType.convertStringValueToProvidedType<int>('2');
-    expect(result, 2);
-    result = sqlType.convertStringValueToProvidedType<double>('10');
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<num>('10');
-    expect(result, 10);
-    result = sqlType.convertStringValueToProvidedType<String>('10');
-    expect(result, '10');
+    expect(sqlType.convertStringValueToProvidedType<int>('1'), 1);
+    expect(sqlType.convertStringValueToProvidedType<int>('0'), 0);
+    expect(sqlType.convertStringValueToProvidedType<int>('2'), 2);
+    expect(sqlType.convertStringValueToProvidedType<double>('10'), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<num>('10'), 10);
+    expect(sqlType.convertStringValueToProvidedType<String>('10'), '10');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<bool>('1'),
@@ -93,18 +83,12 @@ void main() {
   test('testing long type', () {
     final sqlType = MySQLColumnType.longType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<int>('1');
-    expect(result, 1);
-    result = sqlType.convertStringValueToProvidedType<int>('0');
-    expect(result, 0);
-    result = sqlType.convertStringValueToProvidedType<int>('2');
-    expect(result, 2);
-    result = sqlType.convertStringValueToProvidedType<double>('10');
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<num>('10');
-    expect(result, 10);
-    result = sqlType.convertStringValueToProvidedType<String>('10');
-    expect(result, '10');
+    expect(sqlType.convertStringValueToProvidedType<int>('1'), 1);
+    expect(sqlType.convertStringValueToProvidedType<int>('0'), 0);
+    expect(sqlType.convertStringValueToProvidedType<int>('2'), 2);
+    expect(sqlType.convertStringValueToProvidedType<double>('10'), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<num>('10'), 10);
+    expect(sqlType.convertStringValueToProvidedType<String>('10'), '10');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<bool>('1'),
@@ -119,18 +103,12 @@ void main() {
   test('testing long long type', () {
     final sqlType = MySQLColumnType.longLongType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<int>('1');
-    expect(result, 1);
-    result = sqlType.convertStringValueToProvidedType<int>('0');
-    expect(result, 0);
-    result = sqlType.convertStringValueToProvidedType<int>('2');
-    expect(result, 2);
-    result = sqlType.convertStringValueToProvidedType<double>('10');
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<num>('10');
-    expect(result, 10);
-    result = sqlType.convertStringValueToProvidedType<String>('10');
-    expect(result, '10');
+    expect(sqlType.convertStringValueToProvidedType<int>('1'), 1);
+    expect(sqlType.convertStringValueToProvidedType<int>('0'), 0);
+    expect(sqlType.convertStringValueToProvidedType<int>('2'), 2);
+    expect(sqlType.convertStringValueToProvidedType<double>('10'), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<num>('10'), 10);
+    expect(sqlType.convertStringValueToProvidedType<String>('10'), '10');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<bool>('1'),
@@ -145,18 +123,12 @@ void main() {
   test('testing int24 type', () {
     final sqlType = MySQLColumnType.longLongType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<int>('1');
-    expect(result, 1);
-    result = sqlType.convertStringValueToProvidedType<int>('0');
-    expect(result, 0);
-    result = sqlType.convertStringValueToProvidedType<int>('2');
-    expect(result, 2);
-    result = sqlType.convertStringValueToProvidedType<double>('10');
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<num>('10');
-    expect(result, 10);
-    result = sqlType.convertStringValueToProvidedType<String>('10');
-    expect(result, '10');
+    expect(sqlType.convertStringValueToProvidedType<int>('1'), 1);
+    expect(sqlType.convertStringValueToProvidedType<int>('0'), 0);
+    expect(sqlType.convertStringValueToProvidedType<int>('2'), 2);
+    expect(sqlType.convertStringValueToProvidedType<double>('10'), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<num>('10'), 10);
+    expect(sqlType.convertStringValueToProvidedType<String>('10'), '10');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<bool>('1'),
@@ -171,14 +143,10 @@ void main() {
   test('testing float type', () {
     final sqlType = MySQLColumnType.floatType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<double>('10.00');
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<double>('-10.00');
-    expect(result, -10.00);
-    result = sqlType.convertStringValueToProvidedType<num>('10.00');
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<String>('10.00');
-    expect(result, '10.00');
+    expect(sqlType.convertStringValueToProvidedType<double>('10.00'), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<double>('-10.00'), -10.00);
+    expect(sqlType.convertStringValueToProvidedType<num>('10.00'), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<String>('10.00'), '10.00');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('1.0'),
@@ -197,14 +165,10 @@ void main() {
   test('testing double type', () {
     final sqlType = MySQLColumnType.doubleType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<double>('10.00');
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<double>('-10.00');
-    expect(result, -10.00);
-    result = sqlType.convertStringValueToProvidedType<num>('10.00');
-    expect(result, 10.00);
-    result = sqlType.convertStringValueToProvidedType<String>('10.00');
-    expect(result, '10.00');
+    expect(sqlType.convertStringValueToProvidedType<double>('10.00'), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<double>('-10.00'), -10.00);
+    expect(sqlType.convertStringValueToProvidedType<num>('10.00'), 10.00);
+    expect(sqlType.convertStringValueToProvidedType<String>('10.00'), '10.00');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('1.0'),
@@ -223,10 +187,10 @@ void main() {
   test('testing timestamp type', () {
     final sqlType = MySQLColumnType.timestampType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('123451234'),
       '123451234',
     );
-    expect(result, '123451234');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('123451234'),
@@ -249,10 +213,10 @@ void main() {
   test('testing date type', () {
     final sqlType = MySQLColumnType.dateType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('2022-01-02'),
       '2022-01-02',
     );
-    expect(result, '2022-01-02');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('2022-01-02'),
@@ -275,10 +239,10 @@ void main() {
   test('testing time type', () {
     final sqlType = MySQLColumnType.dateType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('02:00:34'),
       '02:00:34',
     );
-    expect(result, '02:00:34');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('02:00:34'),
@@ -301,15 +265,15 @@ void main() {
   test('testing datetime type', () {
     final sqlType = MySQLColumnType.dateType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('2022-01-05 02:00:34'),
       '2022-01-05 02:00:34',
     );
-    expect(result, '2022-01-05 02:00:34');
 
-    dynamic resultAsDate = sqlType.convertStringValueToProvidedType<DateTime>(
-      '2022-01-05 02:00:34',
+    expect(
+      sqlType.convertStringValueToProvidedType<DateTime>('2022-01-05 02:00:34'),
+      DateTime.parse('2022-01-05 02:00:34'),
     );
-    expect(resultAsDate, DateTime.parse('2022-01-05 02:00:34'));
 
     expect(
       () =>
@@ -337,10 +301,8 @@ void main() {
   test('testing year type', () {
     final sqlType = MySQLColumnType.yearType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>('2022');
-    expect(result, '2022');
-    result = sqlType.convertStringValueToProvidedType<int>('2022');
-    expect(result, 2022);
+    expect(sqlType.convertStringValueToProvidedType<String>('2022'), '2022');
+    expect(sqlType.convertStringValueToProvidedType<int>('2022'), 2022);
 
     expect(
       () => sqlType.convertStringValueToProvidedType<double>('2022'),
@@ -359,13 +321,15 @@ void main() {
   test('testing varchar type', () {
     final sqlType = MySQLColumnType.vatChartType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('Some text'),
       'Some text',
     );
-    expect(result, 'Some text');
 
-    result = sqlType.convertStringValueToProvidedType<String>('Какой-то текст');
-    expect(result, 'Какой-то текст');
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('Какой-то текст'),
+      'Какой-то текст',
+    );
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('2022'),
@@ -388,13 +352,15 @@ void main() {
   test('testing string type', () {
     final sqlType = MySQLColumnType.stringType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('Some text'),
       'Some text',
     );
-    expect(result, 'Some text');
 
-    result = sqlType.convertStringValueToProvidedType<String>('Какой-то текст');
-    expect(result, 'Какой-то текст');
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('Какой-то текст'),
+      'Какой-то текст',
+    );
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('2022'),
@@ -417,13 +383,15 @@ void main() {
   test('testing var string type', () {
     final sqlType = MySQLColumnType.varStringType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('Some text'),
       'Some text',
     );
-    expect(result, 'Some text');
 
-    result = sqlType.convertStringValueToProvidedType<String>('Какой-то текст');
-    expect(result, 'Какой-то текст');
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('Какой-то текст'),
+      'Какой-то текст',
+    );
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('2022'),
@@ -446,10 +414,10 @@ void main() {
   test('testing enum type', () {
     final sqlType = MySQLColumnType.enumType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('process'),
       'process',
     );
-    expect(result, 'process');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('process'),
@@ -472,10 +440,10 @@ void main() {
   test('testing set type', () {
     final sqlType = MySQLColumnType.setType;
 
-    dynamic result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('process'),
       'process',
     );
-    expect(result, 'process');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('process'),
@@ -499,10 +467,10 @@ void main() {
     final sqlType = MySQLColumnType.jsonType;
     expect(sqlType.getBestMatchDartType(0), String);
 
-    final result = sqlType.convertStringValueToProvidedType<String>(
+    expect(
+      sqlType.convertStringValueToProvidedType<String>('{"key": "value"}'),
       '{"key": "value"}',
     );
-    expect(result, '{"key": "value"}');
 
     expect(
       () => sqlType.convertStringValueToProvidedType<int>('{"key": "value"}'),
@@ -519,10 +487,12 @@ void main() {
     ];
 
     for (final sqlType in sqlTypes) {
-      final result = sqlType.convertStringValueToProvidedType<DateTime>(
-        '2026-06-18 10:11:12',
+      expect(
+        sqlType.convertStringValueToProvidedType<DateTime>(
+          '2026-06-18 10:11:12',
+        ),
+        isA<DateTime>(),
       );
-      expect(result, isA<DateTime>());
     }
 
     // Invalid DateTime conversion from non-datetime type
