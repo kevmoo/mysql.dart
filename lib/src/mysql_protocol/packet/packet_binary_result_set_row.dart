@@ -1,35 +1,34 @@
 import 'dart:typed_data';
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/exception.dart';
+
+import '../../../exception.dart';
+import '../../../mysql_protocol.dart';
 
 class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
   List<String?> values;
 
-  MySQLBinaryResultSetRowPacket({
-    required this.values,
-  });
+  MySQLBinaryResultSetRowPacket({required this.values});
 
   factory MySQLBinaryResultSetRowPacket.decode(
     Uint8List buffer,
     List<MySQLColumnDefinitionPacket> colDefs,
   ) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
     // packet header (always should by 0x00)
     final type = byteData.getUint8(offset);
     offset += 1;
 
     if (type != 0) {
-      throw MySQLProtocolException(
-        "Can not decode MySQLBinaryResultSetRowPacket: packet type is not 0x00",
+      throw const MySQLProtocolException(
+        'Can not decode MySQLBinaryResultSetRowPacket: packet type is not 0x00',
       );
     }
 
-    List<String?> values = [];
+    var values = <String?>[];
 
     // parse null bitmap
-    int nullBitmapSize = ((colDefs.length + 9) / 8).floor();
+    var nullBitmapSize = ((colDefs.length + 9) / 8).floor();
 
     final nullBitmap = Uint8List.sublistView(
       buffer,
@@ -40,7 +39,7 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
     offset += nullBitmapSize;
 
     // parse binary data
-    for (int x = 0; x < colDefs.length; x++) {
+    for (var x = 0; x < colDefs.length; x++) {
       // check null bitmap first
       final bitmapByteIndex = ((x + 2) / 8).floor();
       final bitmapBitIndex = (x + 2) % 8;
@@ -62,9 +61,7 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
       }
     }
 
-    return MySQLBinaryResultSetRowPacket(
-      values: values,
-    );
+    return MySQLBinaryResultSetRowPacket(values: values);
   }
 
   @override

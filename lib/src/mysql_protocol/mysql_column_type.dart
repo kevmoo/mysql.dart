@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:tuple/tuple.dart';
-import 'package:mysql_client/exception.dart';
-import 'package:mysql_client/mysql_protocol_extension.dart';
+import '../../exception.dart';
+import '../../mysql_protocol_extension.dart';
 
 const mysqlColumnTypeDecimal = 0x00;
 const mysqlColumnTypeTiny = 0x01;
@@ -86,7 +86,7 @@ class MySQLColumnType {
         return int.parse(value) > 0 as T;
       } else {
         throw MySQLProtocolException(
-          "Can not convert MySQL type $_value to requested type bool",
+          'Can not convert MySQL type $_value to requested type bool',
         );
       }
     }
@@ -104,7 +104,7 @@ class MySQLColumnType {
           return int.parse(value) as T;
         default:
           throw MySQLProtocolException(
-            "Can not convert MySQL type $_value to requested type int",
+            'Can not convert MySQL type $_value to requested type int',
           );
       }
     }
@@ -121,7 +121,7 @@ class MySQLColumnType {
           return double.parse(value) as T;
         default:
           throw MySQLProtocolException(
-            "Can not convert MySQL type $_value to requested type double",
+            'Can not convert MySQL type $_value to requested type double',
           );
       }
     }
@@ -138,7 +138,7 @@ class MySQLColumnType {
           return num.parse(value) as T;
         default:
           throw MySQLProtocolException(
-            "Can not convert MySQL type $_value to requested type num",
+            'Can not convert MySQL type $_value to requested type num',
           );
       }
     }
@@ -153,13 +153,13 @@ class MySQLColumnType {
           return DateTime.parse(value) as T;
         default:
           throw MySQLProtocolException(
-            "Can not convert MySQL type $_value to requested type DateTime",
+            'Can not convert MySQL type $_value to requested type DateTime',
           );
       }
     }
 
     throw MySQLProtocolException(
-      "Can not convert MySQL type $_value to requested type ${T.runtimeType}",
+      'Can not convert MySQL type $_value to requested type ${T.runtimeType}',
     );
   }
 
@@ -242,7 +242,7 @@ Tuple2<String, int> parseBinaryColumnData(
       startOffset += 1;
 
       if (numOfBytes == 0) {
-        return Tuple2("0000-00-00 00:00:00", 1);
+        return const Tuple2('0000-00-00 00:00:00', 1);
       }
 
       var year = 0;
@@ -281,12 +281,12 @@ Tuple2<String, int> parseBinaryColumnData(
       }
 
       final result = StringBuffer();
-      result.write(year.toString() + '-');
-      result.write(month.toString().padLeft(2, '0') + '-');
-      result.write(day.toString().padLeft(2, '0') + ' ');
-      result.write(hour.toString().padLeft(2, '0') + ':');
-      result.write(minute.toString().padLeft(2, '0') + ':');
-      result.write(second.toString().padLeft(2, '0') + '.');
+      result.write('$year-');
+      result.write('${month.toString().padLeft(2, '0')}-');
+      result.write('${day.toString().padLeft(2, '0')} ');
+      result.write('${hour.toString().padLeft(2, '0')}:');
+      result.write('${minute.toString().padLeft(2, '0')}:');
+      result.write('${second.toString().padLeft(2, '0')}.');
       result.write(microSecond.toString());
 
       return Tuple2(result.toString(), startOffset - initialOffset);
@@ -298,7 +298,7 @@ Tuple2<String, int> parseBinaryColumnData(
       startOffset += 1;
 
       if (numOfBytes == 0) {
-        return Tuple2("00:00:00", 1);
+        return const Tuple2('00:00:00', 1);
       }
 
       var isNegative = false;
@@ -334,11 +334,11 @@ Tuple2<String, int> parseBinaryColumnData(
 
       final result = StringBuffer();
       if (isNegative) {
-        result.write("-");
+        result.write('-');
       }
-      result.write(hours.toString().padLeft(2, '0') + ':');
-      result.write(minutes.toString().padLeft(2, '0') + ':');
-      result.write(seconds.toString().padLeft(2, '0') + '.');
+      result.write('${hours.toString().padLeft(2, '0')}:');
+      result.write('${minutes.toString().padLeft(2, '0')}:');
+      result.write('${seconds.toString().padLeft(2, '0')}.');
       result.write(microSecond.toString());
 
       return Tuple2(result.toString(), startOffset - initialOffset);
@@ -359,6 +359,6 @@ Tuple2<String, int> parseBinaryColumnData(
   }
 
   throw MySQLProtocolException(
-    "Can not parse binary column data: column type $columnType is not implemented",
+    'Can not parse binary column data: column type $columnType is not implemented',
   );
 }

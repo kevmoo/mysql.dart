@@ -3,8 +3,9 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/exception.dart';
+
+import '../../exception.dart';
+import '../../mysql_protocol.dart';
 
 enum _MySQLConnectionState {
   fresh,
@@ -13,7 +14,7 @@ enum _MySQLConnectionState {
   connectionEstablished,
   waitingCommandResponse,
   quitCommandSend,
-  closed
+  closed,
 }
 
 /// Main class to interact with MySQL database
@@ -39,18 +40,13 @@ class MySQLConnection {
   int _timeoutMs = 10000;
 
   MySQLConnection._({
-    required Socket socket,
-    required String username,
-    required String password,
-    required String collation,
-    bool secure = true,
-    String? databaseName,
-  })  : _socket = socket,
-        _username = username,
-        _password = password,
-        _databaseName = databaseName,
-        _secure = secure,
-        _collation = collation;
+    required this._socket,
+    required this._username,
+    required this._password,
+    required this._collation,
+    this._secure = true,
+    this._databaseName,
+  });
 
   /// Creates connection with provided options.
   ///
@@ -79,7 +75,7 @@ class MySQLConnection {
     String? databaseName,
     String collation = 'utf8mb4_general_ci',
   }) async {
-    final Socket socket = await Socket.connect(host, port);
+    final socket = await Socket.connect(host, port);
 
     if (socket.address.type != InternetAddressType.unix) {
       // no support for extensions on sockets
@@ -113,7 +109,7 @@ class MySQLConnection {
   /// Default [timeoutMs] is 10000 milliseconds
   Future<void> connect({int timeoutMs = 10000}) async {
     if (_state != _MySQLConnectionState.fresh) {
-      throw MySQLClientException("Can not connect: status is not fresh");
+      throw const MySQLClientException('Can not connect: status is not fresh');
     }
 
     _timeoutMs = timeoutMs;
@@ -122,14 +118,13 @@ class MySQLConnection {
 
     _socketSubscription = _socket.listen((data) {
       for (final chunk in _splitPackets(data)) {
-        _processSocketData(chunk)
-            .onError((error, stackTrace) => _lastError = error);
+        _processSocketData(
+          chunk,
+        ).onError((error, stackTrace) => _lastError = error);
       }
     });
 
-    _socketSubscription!.onDone(() {
-      _handleSocketClose();
-    });
+    _socketSubscription!.onDone(_handleSocketClose);
 
     // wait for connection established
     await Future.doWhile(() async {
@@ -143,12 +138,10 @@ class MySQLConnection {
         return false;
       }
 
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       return true;
-    }).timeout(Duration(
-      milliseconds: timeoutMs,
-    ));
+    }).timeout(Duration(milliseconds: timeoutMs));
 
     // set connection charset
     await execute(
@@ -180,8 +173,9 @@ class MySQLConnection {
     if (_state == _MySQLConnectionState.initialHandshakeResponseSend) {
       // check for auth switch request
       try {
-        final authSwitchPacket =
-            MySQLPacket.decodeAuthSwitchRequestPacket(data);
+        final authSwitchPacket = MySQLPacket.decodeAuthSwitchRequestPacket(
+          data,
+        );
 
         final payload =
             authSwitchPacket.payload as MySQLPacketAuthSwitchRequest;
@@ -192,9 +186,9 @@ class MySQLConnection {
           case 'mysql_native_password':
             final responsePayload =
                 MySQLPacketAuthSwitchResponse.createWithNativePassword(
-              password: _password,
-              challenge: payload.authPluginData.sublist(0, 20),
-            );
+                  password: _password,
+                  challenge: payload.authPluginData.sublist(0, 20),
+                );
             final responsePacket = MySQLPacket(
               sequenceID: authSwitchPacket.sequenceID + 1,
               payload: responsePayload,
@@ -205,7 +199,8 @@ class MySQLConnection {
             return;
           default:
             throw MySQLClientException(
-                "Unsupported auth plugin name: ${payload.authPluginName}");
+              'Unsupported auth plugin name: ${payload.authPluginName}',
+            );
         }
       } catch (e) {
         // not auth switch request packet, continue packet processing
@@ -224,12 +219,14 @@ class MySQLConnection {
 
         if (_activeAuthPluginName != 'caching_sha2_password') {
           throw MySQLClientException(
-              "Unexpected auth plugin name $_activeAuthPluginName, while receiving MySQLPacketExtraAuthData packet");
+            'Unexpected auth plugin name $_activeAuthPluginName, while receiving MySQLPacketExtraAuthData packet',
+          );
         }
 
         if (_secure == false) {
-          throw MySQLClientException(
-              "Auth plugin caching_sha2_password is supported only with secure connections. Pass secure: true or use another auth method");
+          throw const MySQLClientException(
+            'Auth plugin caching_sha2_password is supported only with secure connections. Pass secure: true or use another auth method',
+          );
         }
 
         final payload = packet.payload as MySQLPacketExtraAuthData;
@@ -251,14 +248,16 @@ class MySQLConnection {
           _socket.add(authExtraDataResponse.encode());
           return;
         } else {
-          throw MySQLClientException("Unsupported extra auth data: $data");
+          throw MySQLClientException('Unsupported extra auth data: $data');
         }
       }
 
       if (packet.isErrorPacket()) {
         final errorPayload = packet.payload as MySQLPacketError;
         throw MySQLServerException(
-            errorPayload.errorMessage, errorPayload.errorCode);
+          errorPayload.errorMessage,
+          errorPayload.errorCode,
+        );
       }
 
       if (packet.isOkPacket()) {
@@ -275,7 +274,7 @@ class MySQLConnection {
     }
 
     throw MySQLClientException(
-      "Skipping socket data, because of connection bad state\nState: ${_state.name}\nData: $data",
+      'Skipping socket data, because of connection bad state\nState: ${_state.name}\nData: $data',
     );
   }
 
@@ -286,7 +285,7 @@ class MySQLConnection {
       _incompleteBufferData.clear();
     }
 
-    Uint8List view = data;
+    var view = data;
 
     while (true) {
       // if packet size is less then 4 bytes, we can not even detect payload length and total packet size
@@ -328,14 +327,16 @@ class MySQLConnection {
     final payload = packet.payload;
 
     if (payload is! MySQLPacketInitialHandshake) {
-      throw MySQLClientException("Expected MySQLPacketInitialHandshake packet");
+      throw const MySQLClientException(
+        'Expected MySQLPacketInitialHandshake packet',
+      );
     }
 
     _serverCapabilities = payload.capabilityFlags;
 
     if (_secure && (_serverCapabilities & mysqlCapFlagClientSsl == 0)) {
-      throw MySQLClientException(
-        "Server does not support SSL connection. Pass secure: false to createConnection or enable SSL support",
+      throw const MySQLClientException(
+        'Server does not support SSL connection. Pass secure: false to createConnection or enable SSL support',
       );
     }
 
@@ -367,14 +368,13 @@ class MySQLConnection {
 
         _socketSubscription = _socket.listen((data) {
           for (final chunk in _splitPackets(data)) {
-            _processSocketData(chunk)
-                .onError((error, stackTrace) => _lastError = error);
+            _processSocketData(
+              chunk,
+            ).onError((error, stackTrace) => _lastError = error);
           }
         });
 
-        _socketSubscription!.onDone(() {
-          _handleSocketClose();
-        });
+        _socketSubscription!.onDone(_handleSocketClose);
       }
 
       await initiateSSL();
@@ -387,10 +387,10 @@ class MySQLConnection {
       case 'mysql_native_password':
         final responsePayload =
             MySQLPacketHandshakeResponse41.createWithNativePassword(
-          username: _username,
-          password: _password,
-          initialHandshakePayload: payload,
-        );
+              username: _username,
+              password: _password,
+              initialHandshakePayload: payload,
+            );
 
         responsePayload.database = _databaseName;
 
@@ -406,10 +406,10 @@ class MySQLConnection {
       case 'caching_sha2_password':
         final responsePayload =
             MySQLPacketHandshakeResponse41.createWithCachingSha2Password(
-          username: _username,
-          password: _password,
-          initialHandshakePayload: payload,
-        );
+              username: _username,
+              password: _password,
+              initialHandshakePayload: payload,
+            );
 
         responsePayload.database = _databaseName;
 
@@ -424,7 +424,8 @@ class MySQLConnection {
         break;
       default:
         throw MySQLClientException(
-            "Unsupported auth plugin name: $authPluginName");
+          'Unsupported auth plugin name: $authPluginName',
+        );
     }
   }
 
@@ -444,13 +445,16 @@ class MySQLConnection {
     bool iterable = false,
   ]) async {
     if (!_connected) {
-      throw MySQLClientException("Can not execute query: connection closed");
+      throw const MySQLClientException(
+        'Can not execute query: connection closed',
+      );
     }
 
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(_MySQLConnectionState.connectionEstablished)
-          .timeout(Duration(milliseconds: _timeoutMs));
+      await _waitForState(
+        _MySQLConnectionState.connectionEstablished,
+      ).timeout(Duration(milliseconds: _timeoutMs));
     }
 
     _state = _MySQLConnectionState.waitingCommandResponse;
@@ -481,10 +485,10 @@ class MySQLConnection {
      * 3 - eofParsed
      * 4 - rowsParsed
      */
-    int state = 0;
-    int colsCount = 0;
-    List<MySQLColumnDefinitionPacket> colDefs = [];
-    List<MySQLResultSetRowPacket> resultSetRows = [];
+    var state = 0;
+    var colsCount = 0;
+    var colDefs = <MySQLColumnDefinitionPacket>[];
+    var resultSetRows = <MySQLResultSetRowPacket>[];
 
     // support for iterable result set
     IterableResultSet? iterableResultSet;
@@ -526,9 +530,7 @@ class MySQLConnection {
           case 3:
             if (iterable) {
               if (iterableResultSet == null) {
-                iterableResultSet = IterableResultSet._(
-                  columns: colDefs,
-                );
+                iterableResultSet = IterableResultSet._(columns: colDefs);
 
                 sink = iterableResultSet!._sink;
                 completer.complete(iterableResultSet);
@@ -617,8 +619,8 @@ class MySQLConnection {
             resultSetRows.add(payload);
           } else {
             completer.completeError(
-              MySQLClientException(
-                "Unexpected payload received in response to COMM_QUERY request",
+              const MySQLClientException(
+                'Unexpected payload received in response to COMM_QUERY request',
               ),
               StackTrace.current,
             );
@@ -641,22 +643,23 @@ class MySQLConnection {
   ///
   /// If MySQLClientException is thrown inside [callback] function, transaction is rolled back
   Future<T> transactional<T>(
-      FutureOr<T> Function(MySQLConnection conn) callback) async {
+    FutureOr<T> Function(MySQLConnection conn) callback,
+  ) async {
     // prevent double transaction
     if (_inTransaction) {
-      throw MySQLClientException("Already in transaction");
+      throw const MySQLClientException('Already in transaction');
     }
     _inTransaction = true;
 
-    await execute("START TRANSACTION");
+    await execute('START TRANSACTION');
 
     try {
       final result = await callback(this);
-      await execute("COMMIT");
+      await execute('COMMIT');
       _inTransaction = false;
       return result;
     } catch (e) {
-      await execute("ROLLBACK");
+      await execute('ROLLBACK');
       _inTransaction = false;
       rethrow;
     }
@@ -664,33 +667,34 @@ class MySQLConnection {
 
   String _substitureParams(String query, Map<String, dynamic> params) {
     // convert params to string
-    Map<String, String> convertedParams = {};
+    var convertedParams = <String, String>{};
 
     for (final param in params.entries) {
       String value;
+      final val = param.value;
 
-      if (param.value == null) {
-        value = "NULL";
-      } else if (param.value is String) {
-        value = "'" + _escapeString(param.value) + "'";
-      } else if (param.value is num) {
-        value = param.value.toString();
-      } else if (param.value is bool) {
-        value = param.value ? "TRUE" : "FALSE";
+      if (val == null) {
+        value = 'NULL';
+      } else if (val is String) {
+        value = "'${_escapeString(val)}'";
+      } else if (val is num) {
+        value = val.toString();
+      } else if (val is bool) {
+        value = val ? 'TRUE' : 'FALSE';
       } else {
-        value = "'" + _escapeString(param.value.toString()) + "'";
+        value = "'${_escapeString(val.toString())}'";
       }
 
       convertedParams[param.key] = value;
     }
 
     // find all :placeholders, which can be substituted
-    final pattern = RegExp(r":(\w+)");
+    final pattern = RegExp(r':(\w+)');
 
     final matches = pattern.allMatches(query).where((match) {
       final subString = query.substring(0, match.start);
 
-      int count = "'".allMatches(subString).length;
+      var count = "'".allMatches(subString).length;
       if (count > 0 && count.isOdd) {
         return false;
       }
@@ -703,7 +707,7 @@ class MySQLConnection {
       return true;
     }).toList();
 
-    int lengthShift = 0;
+    var lengthShift = 0;
 
     for (final match in matches) {
       final paramName = match.group(1);
@@ -711,7 +715,8 @@ class MySQLConnection {
       // check param exists
       if (false == convertedParams.containsKey(paramName)) {
         throw MySQLClientException(
-            "There is no parameter with name: $paramName");
+          'There is no parameter with name: $paramName',
+        );
       }
 
       final newQuery = query.replaceFirst(
@@ -736,13 +741,16 @@ class MySQLConnection {
   /// Pass [iterable] true if you want to iterable result set. See [execute] for details
   Future<PreparedStmt> prepare(String query, [bool iterable = false]) async {
     if (!_connected) {
-      throw MySQLClientException("Can not prepare stmt: connection closed");
+      throw const MySQLClientException(
+        'Can not prepare stmt: connection closed',
+      );
     }
 
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(_MySQLConnectionState.connectionEstablished)
-          .timeout(Duration(milliseconds: _timeoutMs));
+      await _waitForState(
+        _MySQLConnectionState.connectionEstablished,
+      ).timeout(Duration(milliseconds: _timeoutMs));
     }
 
     _state = _MySQLConnectionState.waitingCommandResponse;
@@ -762,8 +770,8 @@ class MySQLConnection {
      * 1 - first packet decoded
      * 2 - eof decoded
      */
-    int state = 0;
-    int numOfEofPacketsParsed = 0;
+    var state = 0;
+    var numOfEofPacketsParsed = 0;
     MySQLPacketStmtPrepareOK? preparedPacket;
 
     _responseCallback = (data) async {
@@ -800,11 +808,13 @@ class MySQLConnection {
               if (done) {
                 state = 2;
 
-                completer.complete(PreparedStmt._(
-                  preparedPacket: preparedPacket!,
-                  connection: this,
-                  iterable: iterable,
-                ));
+                completer.complete(
+                  PreparedStmt._(
+                    preparedPacket: preparedPacket!,
+                    connection: this,
+                    iterable: iterable,
+                  ),
+                );
 
                 _state = _MySQLConnectionState.connectionEstablished;
 
@@ -828,8 +838,8 @@ class MySQLConnection {
             return;
           } else {
             completer.completeError(
-              MySQLClientException(
-                "Unexpected payload received in response to COMM_STMT_PREPARE request",
+              const MySQLClientException(
+                'Unexpected payload received in response to COMM_STMT_PREPARE request',
               ),
               StackTrace.current,
             );
@@ -854,14 +864,16 @@ class MySQLConnection {
     bool iterable,
   ) async {
     if (!_connected) {
-      throw MySQLClientException(
-          "Can not execute prepared stmt: connection closed");
+      throw const MySQLClientException(
+        'Can not execute prepared stmt: connection closed',
+      );
     }
 
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(_MySQLConnectionState.connectionEstablished)
-          .timeout(Duration(milliseconds: _timeoutMs));
+      await _waitForState(
+        _MySQLConnectionState.connectionEstablished,
+      ).timeout(Duration(milliseconds: _timeoutMs));
     }
 
     _state = _MySQLConnectionState.waitingCommandResponse;
@@ -886,10 +898,10 @@ class MySQLConnection {
      * 3 - eofParsed
      * 4 - rowsParsed
      */
-    int state = 0;
-    int colsCount = 0;
-    List<MySQLColumnDefinitionPacket> colDefs = [];
-    List<MySQLBinaryResultSetRowPacket> resultSetRows = [];
+    var state = 0;
+    var colsCount = 0;
+    var colDefs = <MySQLColumnDefinitionPacket>[];
+    var resultSetRows = <MySQLBinaryResultSetRowPacket>[];
 
     // support for iterable result set
     IterablePreparedStmtResultSet? iterableResultSet;
@@ -927,13 +939,15 @@ class MySQLConnection {
               final errorPayload = packet.payload as MySQLPacketError;
               completer.completeError(
                 MySQLServerException(
-                    errorPayload.errorMessage, errorPayload.errorCode),
+                  errorPayload.errorMessage,
+                  errorPayload.errorCode,
+                ),
               );
               _state = _MySQLConnectionState.connectionEstablished;
               return;
             } else {
               completer.completeError(
-                MySQLClientException("Unexcpected packet type"),
+                const MySQLClientException('Unexcpected packet type'),
                 StackTrace.current,
               );
               _forceClose();
@@ -961,8 +975,10 @@ class MySQLConnection {
                 return;
               }
 
-              packet =
-                  MySQLPacket.decodeBinaryResultSetRowPacket(data, colDefs);
+              packet = MySQLPacket.decodeBinaryResultSetRowPacket(
+                data,
+                colDefs,
+              );
               final values =
                   (packet.payload as MySQLBinaryResultSetRowPacket).values;
               sink!.add(ResultSetRow._(colDefs: colDefs, values: values));
@@ -989,8 +1005,10 @@ class MySQLConnection {
                 return;
               }
 
-              packet =
-                  MySQLPacket.decodeBinaryResultSetRowPacket(data, colDefs);
+              packet = MySQLPacket.decodeBinaryResultSetRowPacket(
+                data,
+                colDefs,
+              );
 
               break;
             }
@@ -1020,8 +1038,8 @@ class MySQLConnection {
             resultSetRows.add(payload);
           } else {
             completer.completeError(
-              MySQLClientException(
-                "Unexpected payload received in response to COMM_QUERY request",
+              const MySQLClientException(
+                'Unexpected payload received in response to COMM_QUERY request',
               ),
               StackTrace.current,
             );
@@ -1042,13 +1060,16 @@ class MySQLConnection {
 
   Future<void> _deallocatePreparedStmt(PreparedStmt stmt) async {
     if (!_connected) {
-      throw MySQLClientException("Can not execute query: connection closed");
+      throw const MySQLClientException(
+        'Can not execute query: connection closed',
+      );
     }
 
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(_MySQLConnectionState.connectionEstablished)
-          .timeout(Duration(milliseconds: _timeoutMs));
+      await _waitForState(
+        _MySQLConnectionState.connectionEstablished,
+      ).timeout(Duration(milliseconds: _timeoutMs));
     }
 
     final payload = MySQLPacketCommStmtClose(
@@ -1065,7 +1086,7 @@ class MySQLConnection {
   }
 
   String _escapeString(String value) {
-    value = value.replaceAll(r"\", r'\\');
+    value = value.replaceAll(r'\', r'\\');
     value = value.replaceAll(r"'", r"''");
     return value;
   }
@@ -1081,8 +1102,8 @@ class MySQLConnection {
     );
 
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      throw MySQLClientException(
-        "Can not close connection. Connection state is not in connectionEstablished state",
+      throw const MySQLClientException(
+        'Can not close connection. Connection state is not in connectionEstablished state',
       );
     }
 
@@ -1098,7 +1119,7 @@ class MySQLConnection {
     }
 
     await _socket.flush();
-    await Future.delayed(Duration(milliseconds: 10));
+    await Future<void>.delayed(const Duration(milliseconds: 10));
     await _socket.close();
     _socket.destroy();
 
@@ -1150,7 +1171,7 @@ class MySQLConnection {
         return false;
       }
 
-      await Future.delayed(Duration(microseconds: 100));
+      await Future<void>.delayed(const Duration(microseconds: 100));
       return true;
     });
   }
@@ -1186,7 +1207,7 @@ abstract class IResultSet
     if (_current != null) {
       return _current!;
     } else {
-      throw RangeError("Trying to access past the end value");
+      throw RangeError('Trying to access past the end value');
     }
   }
 
@@ -1219,9 +1240,7 @@ abstract class IResultSet
 class ResultSet extends IResultSet {
   final MySQLPacketResultSet _resultSetPacket;
 
-  ResultSet._({
-    required MySQLPacketResultSet resultSetPacket,
-  }) : _resultSetPacket = resultSetPacket;
+  ResultSet._({required this._resultSetPacket});
 
   @override
   int get numOfColumns => _resultSetPacket.columns.length;
@@ -1237,10 +1256,10 @@ class ResultSet extends IResultSet {
 
   @override
   Iterable<ResultSetRow> get rows sync* {
-    for (final _row in _resultSetPacket.rows) {
+    for (final row in _resultSetPacket.rows) {
       yield ResultSetRow._(
         colDefs: _resultSetPacket.columns,
-        values: _row.values,
+        values: row.values,
       );
     }
   }
@@ -1248,11 +1267,8 @@ class ResultSet extends IResultSet {
   @override
   Iterable<ResultSetColumn> get cols {
     return _resultSetPacket.columns.map(
-      (e) => ResultSetColumn(
-        name: e.name,
-        type: e.type,
-        length: e.columnLength,
-      ),
+      (e) =>
+          ResultSetColumn(name: e.name, type: e.type, length: e.columnLength),
     );
   }
 }
@@ -1262,9 +1278,7 @@ class IterableResultSet with IterableMixin<IResultSet> implements IResultSet {
   final List<MySQLColumnDefinitionPacket> _columns;
   late StreamController<ResultSetRow> _controller;
 
-  IterableResultSet._({
-    required List<MySQLColumnDefinitionPacket> columns,
-  }) : _columns = columns {
+  IterableResultSet._({required this._columns}) {
     _controller = StreamController();
   }
 
@@ -1272,7 +1286,7 @@ class IterableResultSet with IterableMixin<IResultSet> implements IResultSet {
   IResultSet? get next => throw UnimplementedError();
 
   @override
-  set next(val) => throw UnimplementedError();
+  set next(IResultSet? val) => throw UnimplementedError();
 
   @override
   Iterator<IResultSet> get iterator => throw UnimplementedError();
@@ -1295,9 +1309,9 @@ class IterableResultSet with IterableMixin<IResultSet> implements IResultSet {
   int get numOfColumns => _columns.length;
 
   @override
-  int get numOfRows => throw MySQLClientException(
-        "numOfRows is not implemented for IterableResultSet",
-      );
+  int get numOfRows => throw const MySQLClientException(
+    'numOfRows is not implemented for IterableResultSet',
+  );
 
   @override
   BigInt get affectedRows => BigInt.zero;
@@ -1308,27 +1322,22 @@ class IterableResultSet with IterableMixin<IResultSet> implements IResultSet {
   @override
   Iterable<ResultSetColumn> get cols {
     return _columns.map(
-      (e) => ResultSetColumn(
-        name: e.name,
-        type: e.type,
-        length: e.columnLength,
-      ),
+      (e) =>
+          ResultSetColumn(name: e.name, type: e.type, length: e.columnLength),
     );
   }
 
   @override
-  Iterable<ResultSetRow> get rows => throw MySQLClientException(
-        "Use rowsStream to get rows from IterableResultSet",
-      );
+  Iterable<ResultSetRow> get rows => throw const MySQLClientException(
+    'Use rowsStream to get rows from IterableResultSet',
+  );
 }
 
 /// Represents result of [PreparedStmt.execute] method
 class PreparedStmtResultSet extends IResultSet {
   final MySQLPacketBinaryResultSet _resultSetPacket;
 
-  PreparedStmtResultSet._({
-    required MySQLPacketBinaryResultSet resultSetPacket,
-  }) : _resultSetPacket = resultSetPacket;
+  PreparedStmtResultSet._({required this._resultSetPacket});
 
   @override
   int get numOfColumns => _resultSetPacket.columns.length;
@@ -1344,10 +1353,10 @@ class PreparedStmtResultSet extends IResultSet {
 
   @override
   Iterable<ResultSetRow> get rows sync* {
-    for (final _row in _resultSetPacket.rows) {
+    for (final row in _resultSetPacket.rows) {
       yield ResultSetRow._(
         colDefs: _resultSetPacket.columns,
-        values: _row.values,
+        values: row.values,
       );
     }
   }
@@ -1355,11 +1364,8 @@ class PreparedStmtResultSet extends IResultSet {
   @override
   Iterable<ResultSetColumn> get cols {
     return _resultSetPacket.columns.map(
-      (e) => ResultSetColumn(
-        name: e.name,
-        type: e.type,
-        length: e.columnLength,
-      ),
+      (e) =>
+          ResultSetColumn(name: e.name, type: e.type, length: e.columnLength),
     );
   }
 }
@@ -1369,9 +1375,7 @@ class IterablePreparedStmtResultSet extends IResultSet {
   final List<MySQLColumnDefinitionPacket> _columns;
   late StreamController<ResultSetRow> _controller;
 
-  IterablePreparedStmtResultSet._({
-    required List<MySQLColumnDefinitionPacket> columns,
-  }) : _columns = columns {
+  IterablePreparedStmtResultSet._({required this._columns}) {
     _controller = StreamController();
   }
 
@@ -1381,9 +1385,9 @@ class IterablePreparedStmtResultSet extends IResultSet {
   int get numOfColumns => _columns.length;
 
   @override
-  int get numOfRows => throw MySQLClientException(
-        "numOfRows is not implemented for IterableResultSet",
-      );
+  int get numOfRows => throw const MySQLClientException(
+    'numOfRows is not implemented for IterableResultSet',
+  );
 
   @override
   BigInt get affectedRows => BigInt.zero;
@@ -1392,9 +1396,9 @@ class IterablePreparedStmtResultSet extends IResultSet {
   BigInt get lastInsertID => BigInt.zero;
 
   @override
-  Iterable<ResultSetRow> get rows => throw MySQLClientException(
-        "Use rowsStream to get rows from IterablePreparedStmtResultSet",
-      );
+  Iterable<ResultSetRow> get rows => throw const MySQLClientException(
+    'Use rowsStream to get rows from IterablePreparedStmtResultSet',
+  );
 
   @override
   Stream<ResultSetRow> get rowsStream => _controller.stream;
@@ -1402,11 +1406,8 @@ class IterablePreparedStmtResultSet extends IResultSet {
   @override
   Iterable<ResultSetColumn> get cols {
     return _columns.map(
-      (e) => ResultSetColumn(
-        name: e.name,
-        type: e.type,
-        length: e.columnLength,
-      ),
+      (e) =>
+          ResultSetColumn(name: e.name, type: e.type, length: e.columnLength),
     );
   }
 }
@@ -1415,7 +1416,7 @@ class IterablePreparedStmtResultSet extends IResultSet {
 class EmptyResultSet extends IResultSet {
   final MySQLPacketOK _okPacket;
 
-  EmptyResultSet({required MySQLPacketOK okPacket}) : _okPacket = okPacket;
+  EmptyResultSet({required this._okPacket});
 
   @override
   int get numOfColumns => 0;
@@ -1441,11 +1442,7 @@ class ResultSetRow {
   final List<MySQLColumnDefinitionPacket> _colDefs;
   final List<String?> _values;
 
-  ResultSetRow._({
-    required List<MySQLColumnDefinitionPacket> colDefs,
-    required List<String?> values,
-  })  : _colDefs = colDefs,
-        _values = values;
+  ResultSetRow._({required this._colDefs, required this._values});
 
   /// Get number of columns for this row
   int get numOfColumns => _colDefs.length;
@@ -1453,7 +1450,7 @@ class ResultSetRow {
   /// Get column data by column index (starting form 0)
   String? colAt(int colIndex) {
     if (colIndex >= _values.length) {
-      throw MySQLClientException("Column index is out of range");
+      throw const MySQLClientException('Column index is out of range');
     }
 
     final value = _values[colIndex];
@@ -1471,8 +1468,10 @@ class ResultSetRow {
     final value = colAt(colIndex);
     final colDef = _colDefs[colIndex];
 
-    return colDef.type
-        .convertStringValueToProvidedType<T>(value, colDef.columnLength);
+    return colDef.type.convertStringValueToProvidedType<T>(
+      value,
+      colDef.columnLength,
+    );
   }
 
   /// Get column data by column name
@@ -1482,11 +1481,11 @@ class ResultSetRow {
     );
 
     if (colIndex == -1) {
-      throw MySQLClientException("There is no column with name: $columnName");
+      throw MySQLClientException('There is no column with name: $columnName');
     }
 
     if (colIndex >= _values.length) {
-      throw MySQLClientException("Column index is out of range");
+      throw const MySQLClientException('Column index is out of range');
     }
 
     final value = _values[colIndex];
@@ -1509,15 +1508,17 @@ class ResultSetRow {
 
     final colDef = _colDefs[colIndex];
 
-    return colDef.type
-        .convertStringValueToProvidedType<T>(value, colDef.columnLength);
+    return colDef.type.convertStringValueToProvidedType<T>(
+      value,
+      colDef.columnLength,
+    );
   }
 
   /// Get data for all columns
   Map<String, String?> assoc() {
     final result = <String, String?>{};
 
-    int colIndex = 0;
+    var colIndex = 0;
 
     for (final colDef in _colDefs) {
       result[colDef.name] = _values[colIndex];
@@ -1531,7 +1532,7 @@ class ResultSetRow {
   Map<String, dynamic> typedAssoc() {
     final result = <String, dynamic>{};
 
-    int colIndex = 0;
+    var colIndex = 0;
 
     for (final colDef in _colDefs) {
       final value = _values[colIndex];
@@ -1547,22 +1548,22 @@ class ResultSetRow {
       dynamic decodedValue;
 
       switch (dartType) {
-        case int:
+        case const (int):
           decodedValue = int.parse(value);
           break;
-        case double:
+        case const (double):
           decodedValue = double.parse(value);
           break;
-        case num:
+        case const (num):
           decodedValue = num.parse(value);
           break;
-        case bool:
+        case const (bool):
           decodedValue = int.parse(value) > 0;
           break;
-        case DateTime:
+        case const (DateTime):
           decodedValue = DateTime.parse(value);
           break;
-        case String:
+        case const (String):
           decodedValue = value;
           break;
         default:
@@ -1599,20 +1600,18 @@ class PreparedStmt {
   final bool _iterable;
 
   PreparedStmt._({
-    required MySQLPacketStmtPrepareOK preparedPacket,
-    required MySQLConnection connection,
-    required bool iterable,
-  })  : _preparedPacket = preparedPacket,
-        _connection = connection,
-        _iterable = iterable;
+    required this._preparedPacket,
+    required this._connection,
+    required this._iterable,
+  });
 
   int get numOfParams => _preparedPacket.numOfParams;
 
   /// Executes this prepared statement with given [params]
   Future<IResultSet> execute(List<dynamic> params) async {
     if (numOfParams != params.length) {
-      throw MySQLClientException(
-        "Can not execute prepared stmt: number of passed params != number of prepared params",
+      throw const MySQLClientException(
+        'Can not execute prepared stmt: number of passed params != number of prepared params',
       );
     }
 

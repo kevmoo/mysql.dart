@@ -1,13 +1,17 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:buffer/buffer.dart';
-import 'package:mysql_client/exception.dart';
 import 'package:tuple/tuple.dart';
+
+import 'exception.dart';
 
 extension MySQLUint8ListExtension on Uint8List {
   Tuple2<String, int> getUtf8NullTerminatedString(int startOffset) {
-    final tmp = Uint8List.sublistView(this, startOffset)
-        .takeWhile((value) => value != 0);
+    final tmp = Uint8List.sublistView(
+      this,
+      startOffset,
+    ).takeWhile((value) => value != 0);
 
     return Tuple2(utf8.decode(tmp.toList()), tmp.length + 1);
   }
@@ -35,45 +39,46 @@ extension MySQLUint8ListExtension on Uint8List {
 
 extension MySQLByteDataExtension on ByteData {
   Tuple2<BigInt, int> getVariableEncInt(int startOffset) {
-    int firstByte = getUint8(startOffset);
+    var firstByte = getUint8(startOffset);
 
     if (firstByte < 0xfb) {
       return Tuple2(BigInt.from(firstByte), 1);
     }
 
     if (firstByte == 0xfc) {
-      String radix =
+      var radix =
           getUint8(startOffset + 2).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
+          getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
 
       return Tuple2(BigInt.parse(radix, radix: 16), 3);
     }
 
     if (firstByte == 0xfd) {
-      String radix =
+      var radix =
           getUint8(startOffset + 3).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 2).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
+          getUint8(startOffset + 2).toRadixString(16).padLeft(2, '0') +
+          getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
 
       return Tuple2(BigInt.parse(radix, radix: 16), 4);
     }
 
     if (firstByte == 0xfe) {
-      String radix =
+      var radix =
           getUint8(startOffset + 8).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 7).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 6).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 5).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 4).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 3).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 2).toRadixString(16).padLeft(2, '0') +
-              getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
+          getUint8(startOffset + 7).toRadixString(16).padLeft(2, '0') +
+          getUint8(startOffset + 6).toRadixString(16).padLeft(2, '0') +
+          getUint8(startOffset + 5).toRadixString(16).padLeft(2, '0') +
+          getUint8(startOffset + 4).toRadixString(16).padLeft(2, '0') +
+          getUint8(startOffset + 3).toRadixString(16).padLeft(2, '0') +
+          getUint8(startOffset + 2).toRadixString(16).padLeft(2, '0') +
+          getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
 
       return Tuple2(BigInt.parse(radix, radix: 16), 9);
     }
 
-    throw MySQLProtocolException(
-        "Wrong first byte, while decoding getVariableEncInt");
+    throw const MySQLProtocolException(
+      'Wrong first byte, while decoding getVariableEncInt',
+    );
   }
 
   int getInt2(int startOffset) {
@@ -96,7 +101,7 @@ extension MySQLByteDataExtension on ByteData {
 }
 
 extension MySQLByteWriterExtension on ByteDataWriter {
-  writeVariableEncInt(int value) {
+  void writeVariableEncInt(int value) {
     if (value < 251) {
       writeUint8(value);
     } else if (value >= 251 && value < 65536) {

@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/mysql_protocol_extension.dart';
+import '../../../mysql_protocol.dart';
+import '../../../mysql_protocol_extension.dart';
 
 class MySQLPacketInitialHandshake extends MySQLPacketPayload {
   int protocolVersion;
@@ -28,7 +28,7 @@ class MySQLPacketInitialHandshake extends MySQLPacketPayload {
 
   factory MySQLPacketInitialHandshake.decode(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
     // protocol version
     final protocolVersion = byteData.getUint8(offset);
@@ -43,8 +43,11 @@ class MySQLPacketInitialHandshake extends MySQLPacketPayload {
     offset += 4;
 
     // auth-plugin-data-part-1
-    final authPluginDataPart1 =
-        Uint8List.sublistView(buffer, offset, offset + 8);
+    final authPluginDataPart1 = Uint8List.sublistView(
+      buffer,
+      offset,
+      offset + 8,
+    );
     offset += 9; // 8 + filler;
 
     // capability flags (lower 2 bytes)
@@ -68,7 +71,7 @@ class MySQLPacketInitialHandshake extends MySQLPacketPayload {
     final capabilityFlags = capabilitiesBytesData.getUint32(0, Endian.big);
 
     // length of auth-plugin-data
-    int authPluginDataLength = 0;
+    var authPluginDataLength = 0;
 
     if (capabilityFlags & mysqlCapFlagClientPluginAuth != 0) {
       authPluginDataLength = byteData.getUint8(offset);
@@ -84,8 +87,11 @@ class MySQLPacketInitialHandshake extends MySQLPacketPayload {
     if (capabilityFlags & mysqlCapFlagClientSecureConnection != 0) {
       int length = max(13, authPluginDataLength - 8);
 
-      authPluginDataPart2 =
-          Uint8List.sublistView(buffer, offset, offset + length);
+      authPluginDataPart2 = Uint8List.sublistView(
+        buffer,
+        offset,
+        offset + length,
+      );
 
       offset += length;
     }

@@ -1,9 +1,11 @@
 import 'dart:typed_data';
+
 import 'package:buffer/buffer.dart' show ByteDataWriter;
 import 'package:crypto/crypto.dart' as crypto;
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/exception.dart';
 import 'package:tuple/tuple.dart' show Tuple2;
+
+import '../../exception.dart';
+import '../../mysql_protocol.dart';
 
 const mysqlCapFlagClientLongPassword = 0x00000001;
 const mysqlCapFlagClientFoundRows = 0x00000002;
@@ -62,7 +64,7 @@ class MySQLPacket {
 
   static Tuple2<int, int> decodePacketHeader(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
     // payloadLength
     var db = ByteData(4)
@@ -82,7 +84,7 @@ class MySQLPacket {
 
   static MySQLGenericPacketType detectPacketType(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -104,7 +106,7 @@ class MySQLPacket {
   }
 
   factory MySQLPacket.decodeInitialHandshake(Uint8List buffer) {
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -124,7 +126,7 @@ class MySQLPacket {
 
   factory MySQLPacket.decodeAuthSwitchRequestPacket(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -134,12 +136,14 @@ class MySQLPacket {
     final type = byteData.getUint8(offset);
 
     if (type != 0xfe) {
-      throw MySQLProtocolException(
-          "Can not decode AuthSwitchResponse packet: type is not 0xfe");
+      throw const MySQLProtocolException(
+        'Can not decode AuthSwitchResponse packet: type is not 0xfe',
+      );
     }
 
     final payload = MySQLPacketAuthSwitchRequest.decode(
-        Uint8List.sublistView(buffer, offset));
+      Uint8List.sublistView(buffer, offset),
+    );
 
     return MySQLPacket(
       sequenceID: sequenceNumber,
@@ -150,7 +154,7 @@ class MySQLPacket {
 
   factory MySQLPacket.decodeGenericPacket(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -171,9 +175,10 @@ class MySQLPacket {
       payload = MySQLPacketError.decode(Uint8List.sublistView(buffer, offset));
     } else if (type == 0x01) {
       payload = MySQLPacketExtraAuthData.decode(
-          Uint8List.sublistView(buffer, offset));
+        Uint8List.sublistView(buffer, offset),
+      );
     } else {
-      throw MySQLProtocolException("Unsupported generic packet: $buffer");
+      throw MySQLProtocolException('Unsupported generic packet: $buffer');
     }
 
     return MySQLPacket(
@@ -185,7 +190,7 @@ class MySQLPacket {
 
   factory MySQLPacket.decodeColumnCountPacket(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -202,12 +207,13 @@ class MySQLPacket {
     } else if (type == 0xff) {
       payload = MySQLPacketError.decode(Uint8List.sublistView(buffer, offset));
     } else if (type == 0xfb) {
-      throw MySQLProtocolException(
-        "COM_QUERY_RESPONSE of type 0xfb is not implemented",
+      throw const MySQLProtocolException(
+        'COM_QUERY_RESPONSE of type 0xfb is not implemented',
       );
     } else {
-      payload =
-          MySQLPacketColumnCount.decode(Uint8List.sublistView(buffer, offset));
+      payload = MySQLPacketColumnCount.decode(
+        Uint8List.sublistView(buffer, offset),
+      );
     }
 
     return MySQLPacket(
@@ -218,7 +224,7 @@ class MySQLPacket {
   }
 
   factory MySQLPacket.decodeColumnDefPacket(Uint8List buffer) {
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -240,7 +246,7 @@ class MySQLPacket {
     Uint8List buffer,
     int numOfCols,
   ) {
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -263,7 +269,7 @@ class MySQLPacket {
     Uint8List buffer,
     List<MySQLColumnDefinitionPacket> colDefs,
   ) {
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -284,7 +290,7 @@ class MySQLPacket {
 
   factory MySQLPacket.decodeCommPrepareStmtResponsePacket(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
     final header = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
@@ -304,7 +310,7 @@ class MySQLPacket {
       payload = MySQLPacketError.decode(Uint8List.sublistView(buffer, offset));
     } else {
       throw MySQLProtocolException(
-        "Unexpected header type while decoding COM_STMT_PREPARE response: $header",
+        'Unexpected header type while decoding COM_STMT_PREPARE response: $header',
       );
     }
 
@@ -316,25 +322,25 @@ class MySQLPacket {
   }
 
   bool isOkPacket() {
-    final _payload = payload;
+    final payload = this.payload;
 
-    return _payload is MySQLPacketOK;
+    return payload is MySQLPacketOK;
   }
 
   bool isErrorPacket() {
-    final _payload = payload;
-    return _payload is MySQLPacketError;
+    final payload = this.payload;
+    return payload is MySQLPacketError;
   }
 
   bool isEOFPacket() {
-    final _payload = payload;
+    final payload = this.payload;
 
-    if (_payload is MySQLPacketEOF) {
+    if (payload is MySQLPacketEOF) {
       return true;
     }
 
-    return _payload is MySQLPacketOK &&
-        _payload.header == 0xfe &&
+    return payload is MySQLPacketOK &&
+        payload.header == 0xfe &&
         payloadLength < 9;
   }
 
@@ -367,15 +373,16 @@ Uint8List xor(List<int> aList, List<int> bList) {
 
   if (a.lengthInBytes == 0 || b.lengthInBytes == 0) {
     throw ArgumentError.value(
-        "lengthInBytes of Uint8List arguments must be > 0");
+      'lengthInBytes of Uint8List arguments must be > 0',
+    );
   }
 
-  bool aIsBigger = a.lengthInBytes > b.lengthInBytes;
-  int length = aIsBigger ? a.lengthInBytes : b.lengthInBytes;
+  var aIsBigger = a.lengthInBytes > b.lengthInBytes;
+  var length = aIsBigger ? a.lengthInBytes : b.lengthInBytes;
 
-  Uint8List buffer = Uint8List(length);
+  var buffer = Uint8List(length);
 
-  for (int i = 0; i < length; i++) {
+  for (var i = 0; i < length; i++) {
     int aa, bb;
     try {
       aa = a.elementAt(i);

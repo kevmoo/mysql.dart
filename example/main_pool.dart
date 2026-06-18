@@ -3,29 +3,27 @@ import 'package:mysql_client/mysql_client.dart';
 Future<void> main(List<String> arguments) async {
   // create connections pool
   final pool = MySQLConnectionPool(
-    host: "127.0.0.1",
+    host: '127.0.0.1',
     port: 3306,
-    userName: "your_user",
-    password: "your_password",
-    databaseName: "your_database_name", // optional
+    userName: 'your_user',
+    password: 'your_password',
+    databaseName: 'your_database_name', // optional
     maxConnections: 10,
   );
 
   // update table (inside transaction) and get total number of affected rows
   final updateResult = await pool.transactional((conn) async {
-    int totalAffectedRows = 0;
+    var totalAffectedRows = 0;
 
-    var res = await conn.execute(
-      "UPDATE book SET price = :price",
-      {"price": 300},
-    );
+    var res = await conn.execute('UPDATE book SET price = :price', {
+      'price': 300,
+    });
 
     totalAffectedRows += res.affectedRows.toInt();
 
-    res = await conn.execute(
-      "UPDATE book_author SET name = :name",
-      {"name": "John Doe"},
-    );
+    res = await conn.execute('UPDATE book_author SET name = :name', {
+      'name': 'John Doe',
+    });
 
     totalAffectedRows += res.affectedRows.toInt();
 
@@ -36,7 +34,7 @@ Future<void> main(List<String> arguments) async {
   print(updateResult);
 
   // make query
-  var result = await pool.execute("SELECT * FROM book");
+  var result = await pool.execute('SELECT * FROM book');
 
   // print some result data
   print(result.numOfColumns);

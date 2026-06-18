@@ -1,15 +1,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:buffer/buffer.dart' show ByteDataWriter;
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/mysql_protocol_extension.dart';
+import '../../mysql_protocol.dart';
+import '../../mysql_protocol_extension.dart';
 
 class MySQLPacketCommInitDB extends MySQLPacketPayload {
   String schemaName;
 
-  MySQLPacketCommInitDB({
-    required this.schemaName,
-  });
+  MySQLPacketCommInitDB({required this.schemaName});
 
   @override
   Uint8List encode() {
@@ -26,9 +24,7 @@ class MySQLPacketCommInitDB extends MySQLPacketPayload {
 class MySQLPacketCommQuery extends MySQLPacketPayload {
   String query;
 
-  MySQLPacketCommQuery({
-    required this.query,
-  });
+  MySQLPacketCommQuery({required this.query});
 
   @override
   Uint8List encode() {
@@ -45,9 +41,7 @@ class MySQLPacketCommQuery extends MySQLPacketPayload {
 class MySQLPacketCommStmtPrepare extends MySQLPacketPayload {
   String query;
 
-  MySQLPacketCommStmtPrepare({
-    required this.query,
-  });
+  MySQLPacketCommStmtPrepare({required this.query});
 
   @override
   Uint8List encode() {
@@ -65,10 +59,7 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
   int stmtID;
   List<dynamic> params; // (type, value)
 
-  MySQLPacketCommStmtExecute({
-    required this.stmtID,
-    required this.params,
-  });
+  MySQLPacketCommStmtExecute({required this.stmtID, required this.params});
 
   @override
   Uint8List encode() {
@@ -90,11 +81,11 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
       final nullBitmap = Uint8List(bitmapSize);
 
       // write null values into null bitmap
-      int paramIndex = 0;
+      var paramIndex = 0;
       for (final param in params) {
         if (param == null) {
-          final paramByteIndex = ((paramIndex) / 8).floor();
-          final paramBitIndex = ((paramIndex) % 8);
+          final paramByteIndex = (paramIndex / 8).floor();
+          final paramBitIndex = paramIndex % 8;
           nullBitmap[paramByteIndex] =
               nullBitmap[paramByteIndex] | (1 << paramBitIndex);
         }
@@ -123,7 +114,7 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
       // write param values
       for (final param in params) {
         if (param != null) {
-          final String value = param.toString();
+          final value = param.toString();
           final encodedData = utf8.encode(value);
           buffer.writeVariableEncInt(encodedData.length);
           buffer.write(encodedData);
@@ -150,9 +141,7 @@ class MySQLPacketCommQuit extends MySQLPacketPayload {
 class MySQLPacketCommStmtClose extends MySQLPacketPayload {
   int stmtID;
 
-  MySQLPacketCommStmtClose({
-    required this.stmtID,
-  });
+  MySQLPacketCommStmtClose({required this.stmtID});
 
   @override
   Uint8List encode() {

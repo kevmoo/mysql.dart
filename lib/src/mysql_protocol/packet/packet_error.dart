@@ -1,6 +1,6 @@
 import 'dart:typed_data';
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/mysql_protocol_extension.dart';
+import '../../../mysql_protocol.dart';
+import '../../../mysql_protocol_extension.dart';
 
 class MySQLPacketError extends MySQLPacketPayload {
   int header;
@@ -16,7 +16,7 @@ class MySQLPacketError extends MySQLPacketPayload {
   factory MySQLPacketError.decode(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
 
-    int offset = 0;
+    var offset = 0;
 
     final header = byteData.getUint8(offset);
     offset += 1;

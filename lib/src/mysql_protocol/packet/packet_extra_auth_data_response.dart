@@ -1,13 +1,11 @@
 import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
-import 'package:mysql_client/mysql_protocol.dart';
+import '../../../mysql_protocol.dart';
 
 class MySQLPacketExtraAuthDataResponse extends MySQLPacketPayload {
   Uint8List data;
 
-  MySQLPacketExtraAuthDataResponse({
-    required this.data,
-  });
+  MySQLPacketExtraAuthDataResponse({required this.data});
 
   @override
   Uint8List encode() {

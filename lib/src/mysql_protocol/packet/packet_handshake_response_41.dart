@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/mysql_protocol_extension.dart';
+import '../../../mysql_protocol.dart';
+import '../../../mysql_protocol_extension.dart';
 
-const _supportedCapabitilies = mysqlCapFlagClientProtocol41 |
+const _supportedCapabitilies =
+    mysqlCapFlagClientProtocol41 |
     mysqlCapFlagClientSecureConnection |
     mysqlCapFlagClientPluginAuth |
     mysqlCapFlagClientPluginAuthLenEncClientData |
@@ -38,7 +39,8 @@ class MySQLPacketHandshakeResponse41 extends MySQLPacketPayload {
     assert(initialHandshakePayload.authPluginDataPart2 != null);
     assert(initialHandshakePayload.authPluginName != null);
 
-    final challenge = initialHandshakePayload.authPluginDataPart1 +
+    final challenge =
+        initialHandshakePayload.authPluginDataPart1 +
         initialHandshakePayload.authPluginDataPart2!.sublist(0, 12);
 
     assert(challenge.length == 20);
@@ -65,7 +67,8 @@ class MySQLPacketHandshakeResponse41 extends MySQLPacketPayload {
     required String password,
     required MySQLPacketInitialHandshake initialHandshakePayload,
   }) {
-    final challenge = initialHandshakePayload.authPluginDataPart1 +
+    final challenge =
+        initialHandshakePayload.authPluginDataPart1 +
         initialHandshakePayload.authPluginDataPart2!.sublist(0, 12);
 
     assert(challenge.length == 20);

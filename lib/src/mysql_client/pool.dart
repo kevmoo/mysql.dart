@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:mysql_client/mysql_client.dart';
+import '../../mysql_client.dart';
 
 /// Class to create and manage pool of database connections
 class MySQLConnectionPool {
@@ -25,13 +25,13 @@ class MySQLConnectionPool {
     required this.host,
     required this.port,
     required this.userName,
-    required password,
+    required this._password,
     required this.maxConnections,
     this.databaseName,
     this.secure = true,
     this.collation = 'utf8_general_ci',
     this.timeoutMs = 10000,
-  }) : _password = password;
+  });
 
   /// Number of active connections in this pool
   /// Active are connections which are currently interacting with the database
@@ -77,7 +77,7 @@ class MySQLConnectionPool {
   Future<PreparedStmt> prepare(String query, [bool iterable = false]) async {
     final conn = await _getFreeConnection();
     try {
-      final stmt = conn.prepare(query, iterable);
+      final stmt = await conn.prepare(query, iterable);
       _releaseConnection(conn);
       return stmt;
     } catch (e) {
@@ -91,7 +91,8 @@ class MySQLConnectionPool {
   /// After callback completes, connection is returned into pool as idle connection
   /// This function returns callback result
   FutureOr<T> withConnection<T>(
-      FutureOr<T> Function(MySQLConnection conn) callback) async {
+    FutureOr<T> Function(MySQLConnection conn) callback,
+  ) async {
     final conn = await _getFreeConnection();
     final result = await callback(conn);
     _releaseConnection(conn);
@@ -100,7 +101,8 @@ class MySQLConnectionPool {
 
   /// See [MySQLConnection.transactional]
   Future<T> transactional<T>(
-      FutureOr<T> Function(MySQLConnection conn) callback) async {
+    FutureOr<T> Function(MySQLConnection conn) callback,
+  ) async {
     return withConnection((conn) {
       return conn.transactional(callback);
     });

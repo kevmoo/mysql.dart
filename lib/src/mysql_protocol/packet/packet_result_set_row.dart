@@ -1,22 +1,22 @@
 import 'dart:typed_data';
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/mysql_protocol_extension.dart';
+
 import 'package:tuple/tuple.dart';
+
+import '../../../mysql_protocol.dart';
+import '../../../mysql_protocol_extension.dart';
 
 class MySQLResultSetRowPacket extends MySQLPacketPayload {
   List<String?> values;
 
-  MySQLResultSetRowPacket({
-    required this.values,
-  });
+  MySQLResultSetRowPacket({required this.values});
 
   factory MySQLResultSetRowPacket.decode(Uint8List buffer, int numOfCols) {
     final byteData = ByteData.sublistView(buffer);
-    int offset = 0;
+    var offset = 0;
 
-    List<String?> values = [];
+    var values = <String?>[];
 
-    for (int x = 0; x < numOfCols; x++) {
+    for (var x = 0; x < numOfCols; x++) {
       Tuple2<String, int> value;
       final nextByte = byteData.getUint8(offset);
 
@@ -30,9 +30,7 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
       }
     }
 
-    return MySQLResultSetRowPacket(
-      values: values,
-    );
+    return MySQLResultSetRowPacket(values: values);
   }
 
   @override
