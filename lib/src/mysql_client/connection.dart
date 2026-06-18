@@ -131,7 +131,13 @@ class MySQLConnection {
       if (_lastError != null) {
         final err = _lastError;
         _forceClose();
-        throw err!;
+        if (err is Exception) {
+          throw err;
+        } else if (err is Error) {
+          throw err;
+        } else {
+          throw Exception(err.toString());
+        }
       }
 
       if (_state == _MySQLConnectionState.connectionEstablished) {
