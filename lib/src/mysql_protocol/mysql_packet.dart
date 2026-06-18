@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart' show ByteDataWriter;
 import 'package:crypto/crypto.dart' as crypto;
 
-import '../../exception.dart';
+import '../exception.dart';
 import 'packet/packet_auth_switch_request.dart';
 import 'packet/packet_binary_result_set_row.dart';
 import 'packet/packet_column_count.dart';

@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import '../../../exception.dart';
+import '../../exception.dart';
 import '../mysql_column_type.dart';
 import '../mysql_packet.dart';
 import 'packet_column_definition.dart';

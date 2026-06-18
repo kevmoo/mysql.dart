@@ -1,6 +1,7 @@
 import 'dart:typed_data';
-import '../../../mysql_protocol_extension.dart';
+
 import '../mysql_packet.dart';
+import '../mysql_protocol_extension.dart';
 
 class MySQLPacketOK extends MySQLPacketPayload {
   int header;

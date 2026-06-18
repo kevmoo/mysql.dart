@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:hex/hex.dart';
-import 'package:mysql_client/mysql_protocol.dart';
-import 'package:mysql_client/mysql_protocol_extension.dart';
+import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
+import 'package:mysql_client/src/mysql_protocol/mysql_protocol_extension.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -1,7 +1,8 @@
 import 'dart:typed_data';
-import '../../../mysql_protocol_extension.dart';
+
 import '../mysql_column_type.dart';
 import '../mysql_packet.dart';
+import '../mysql_protocol_extension.dart';
 
 class MySQLColumnDefinitionPacket extends MySQLPacketPayload {
   String catalog;

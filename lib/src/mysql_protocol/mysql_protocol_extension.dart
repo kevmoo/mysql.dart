@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import 'exception.dart';
+import '../exception.dart';
 
 extension MySQLUint8ListExtension on Uint8List {
   (String, int) getUtf8NullTerminatedString(int startOffset) {

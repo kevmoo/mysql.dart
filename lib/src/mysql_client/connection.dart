@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../../exception.dart';
-import '../../mysql_protocol.dart';
+import '../exception.dart';
+import '../mysql_protocol/mysql_protocol.dart';
 
 enum _MySQLConnectionState {
   fresh,

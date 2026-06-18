@@ -1,5 +1,5 @@
 import 'dart:async';
-import '../../exception.dart';
+
 import '../../mysql_client.dart';
 
 /// Class to create and manage pool of database connections

@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:buffer/buffer.dart' show ByteDataWriter;
-import '../../mysql_protocol.dart';
-import '../../mysql_protocol_extension.dart';
+import 'mysql_protocol.dart';
+import 'mysql_protocol_extension.dart';
 
 class MySQLPacketCommInitDB extends MySQLPacketPayload {
   String schemaName;

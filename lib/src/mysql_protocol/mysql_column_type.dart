@@ -1,6 +1,6 @@
 import 'dart:typed_data';
-import '../../exception.dart';
-import '../../mysql_protocol_extension.dart';
+import '../exception.dart';
+import 'mysql_protocol_extension.dart';
 
 const mysqlColumnTypeDecimal = 0x00;
 const mysqlColumnTypeTiny = 0x01;
