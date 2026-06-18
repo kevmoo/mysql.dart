@@ -6,3 +6,6 @@
 build/
 pubspec.lock
 .vscode/
+
+# Coverage reports
+coverage/
