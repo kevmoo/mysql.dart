@@ -9,31 +9,36 @@ cd "${REPO_ROOT}"
 CONTAINER_NAME="mysql-dart-test"
 
 # Clean up any existing container/symlink
-docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+podman unshare rm -rf .tmp_mysql >/dev/null 2>&1 || true
 rm -f /tmp/mysql.sock
 rm -rf .dart_tool/coverage
 mkdir -p .dart_tool/coverage
 
-echo "Starting MySQL docker container with unix socket mount..."
-docker run --name "${CONTAINER_NAME}" \
+# Create localized directory for Unix sockets
+mkdir -p .tmp_mysql
+
+echo "Starting MySQL podman container with unix socket mount..."
+podman run --name "${CONTAINER_NAME}" \
   -e MYSQL_DATABASE=testdb \
   -e MYSQL_USER=your_user \
   -e MYSQL_PASSWORD=your_password \
   -e MYSQL_RANDOM_ROOT_PASSWORD=yes \
-  -v /tmp:/var/run/mysqld \
+  -v "$(pwd)/.tmp_mysql:/var/run/mysqld:Z,U" \
   -p 3306:3306 \
-  -d mysql:8.0
+  -d docker.io/library/mysql:8.4.9
 
 # Function to clean up on exit
 cleanup() {
   local exit_code=$?
   if [ $exit_code -ne 0 ]; then
     echo "=== MySQL Container Logs ==="
-    docker logs "${CONTAINER_NAME}" || true
+    podman logs "${CONTAINER_NAME}" || true
     echo "============================"
   fi
   echo "Stopping and removing MySQL container..."
-  docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+  podman rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+  podman unshare rm -rf .tmp_mysql >/dev/null 2>&1 || true
   rm -f /tmp/mysql.sock
 }
 trap cleanup EXIT
@@ -41,7 +46,7 @@ trap cleanup EXIT
 echo "Waiting for MySQL to start..."
 # Wait up to 60 seconds
 for i in {1..60}; do
-  if docker exec "${CONTAINER_NAME}" mysqladmin ping -h 127.0.0.1 -u your_user -pyour_password --silent >/dev/null 2>&1; then
+  if podman exec "${CONTAINER_NAME}" mysqladmin ping -h 127.0.0.1 -u your_user -pyour_password --silent >/dev/null 2>&1; then
     echo "MySQL is ready over TCP!"
     sleep 2
     break
@@ -54,7 +59,7 @@ for i in {1..60}; do
 done
 
 # Create symlink for unix socket
-ln -sf /tmp/mysqld.sock /tmp/mysql.sock
+ln -sf "$(pwd)/.tmp_mysql/mysqld.sock" /tmp/mysql.sock
 
 # 1. Run unit tests and collect coverage
 echo "Running unit tests under coverage..."

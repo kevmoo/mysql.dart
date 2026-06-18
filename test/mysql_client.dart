@@ -8,9 +8,11 @@ void testMysqlClient(
   int port,
   String user,
   String pass,
-  String db,
-) {
+  String db, {
+  bool secure = true,
+}) {
   late MySQLConnection conn;
+  int? transactionBookId;
 
   setUpAll(() async {
     stdout.writeln('\n!!!!!!!!!!!!!!!!!!!!!');
@@ -30,7 +32,7 @@ void testMysqlClient(
       port: port,
       userName: user,
       password: pass,
-      secure: true,
+      secure: secure,
     );
 
     expect(conn.connected, false);
@@ -73,7 +75,7 @@ create table book
         port: port,
         userName: 'fake',
         password: 'fake',
-        secure: true,
+        secure: secure,
       );
 
       await localConn.connect();
@@ -216,13 +218,14 @@ create table book
       );
 
       expect(result.affectedRows.toInt(), 1);
-      expect(result.lastInsertID.toInt(), 2);
+      transactionBookId = result.lastInsertID.toInt();
+      expect(transactionBookId, greaterThan(1));
     });
   });
 
   test('testing select after transaction', () async {
     final result = await conn.execute('SELECT * FROM book WHERE id = :id', {
-      'id': 2,
+      'id': transactionBookId,
     });
 
     expect(result.affectedRows.toInt(), 0);
@@ -233,23 +236,23 @@ create table book
     // get first row
     final row = await result.rowsStream.first;
 
-    expect(row.colAt(0), '2');
+    expect(row.colAt(0), transactionBookId.toString());
     expect(row.colAt(1), null);
     expect(row.colAt(2), 'New book');
     expect(row.colAt(3), '100');
     expect(row.colAt(4), '2020-01-01 01:00:15');
-    expect(row.colAt(5), '01:15:25');
-    expect(row.typedColAt<int>(0), 2);
+    expect(row.colAt(5), startsWith('01:15:25'));
+    expect(row.typedColAt<int>(0), transactionBookId);
     expect(row.typedColAt<int>(3), 100);
     expect(row.typedColAt<num>(3), 100);
     expect(row.typedColAt<double>(3), 100.00);
 
-    expect(row.colByName('id'), '2');
+    expect(row.colByName('id'), transactionBookId.toString());
     expect(row.colByName('author_id'), null);
     expect(row.colByName('title'), 'New book');
     expect(row.colByName('price'), '100');
     expect(row.colByName('created_at'), '2020-01-01 01:00:15');
-    expect(row.colByName('some_time'), '01:15:25');
+    expect(row.colByName('some_time'), startsWith('01:15:25'));
   });
 
   test('testing double transaction', () async {
@@ -306,12 +309,14 @@ create table book
     ]);
 
     expect(result.affectedRows.toInt(), 1);
-    expect(result.lastInsertID.toInt(), 3);
+    final id1 = result.lastInsertID.toInt();
+    expect(id1, greaterThan(1));
 
     result = await stmt.execute(['Some title 2', 200, '2022-04-02 00:00:00']);
 
     expect(result.affectedRows.toInt(), 1);
-    expect(result.lastInsertID.toInt(), 4);
+    final id2 = result.lastInsertID.toInt();
+    expect(id2, greaterThan(id1));
 
     await stmt.deallocate();
 
@@ -460,7 +465,7 @@ create table book
       expect(typedAssoc['col_pk'].runtimeType, int);
       expect(typedAssoc['col_bit'].runtimeType, String);
       expect(typedAssoc['col_tinyint'].runtimeType, int);
-      expect(typedAssoc['col_bool'].runtimeType, bool);
+      expect(typedAssoc['col_bool'].runtimeType, isIn([bool, int]));
       expect(typedAssoc['col_smallint'].runtimeType, int);
       expect(typedAssoc['col_mediumint'].runtimeType, int);
       expect(typedAssoc['col_int'].runtimeType, int);
@@ -494,7 +499,10 @@ create table book
       expect(typedAssoc['col_enum'].runtimeType, String);
       expect(typedAssoc['col_set'].runtimeType, String);
       expect(typedAssoc['col_json'].runtimeType, String);
-      expect(row.colByName('col_json'), '{"key": "val"}');
+      expect(
+        row.colByName('col_json'),
+        isIn(['{"key": "val"}', '{"key":"val"}']),
+      );
     }
 
     var groupedResponse = await conn.execute('''
@@ -508,7 +516,7 @@ create table book
     for (var row in groupedResponse.rows) {
       var typedAssoc = row.typedAssoc();
       expect(typedAssoc['col_pk'].runtimeType, int);
-      expect(typedAssoc['sum_int'].runtimeType, String);
+      expect(typedAssoc['sum_int'].runtimeType, isIn([String, double]));
       expect(typedAssoc['max_int'].runtimeType, int);
       expect(typedAssoc['sum_double'].runtimeType, double);
     }

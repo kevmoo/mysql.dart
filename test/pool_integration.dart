@@ -6,6 +6,7 @@ import 'package:test/test.dart';
 void main() {
   const host = '127.0.0.1';
   const port = 3306;
+  final secure = Platform.environment['MYSQL_SECURE'] != 'false';
   const user = 'your_user';
   const pass = 'your_password';
   const db = 'testdb';
@@ -32,6 +33,7 @@ void main() {
       password: pass,
       maxConnections: 2,
       databaseName: db,
+      secure: secure,
     );
   });
 
@@ -131,6 +133,7 @@ void main() {
       password: pass,
       maxConnections: 1,
       databaseName: db,
+      secure: secure,
     );
 
     final completer = Completer<void>();
@@ -212,6 +215,7 @@ void main() {
       password: pass,
       maxConnections: 1,
       databaseName: db,
+      secure: secure,
     );
 
     final f1 = tempPool.withConnection((conn) async {});
@@ -232,6 +236,7 @@ void main() {
         password: pass,
         maxConnections: 1,
         databaseName: db,
+        secure: secure,
       );
 
       late MySQLConnection leasedConn;
@@ -271,6 +276,7 @@ void main() {
       maxConnections: 1,
       databaseName: db,
       timeoutMs: 100, // short timeout to fail quickly
+      secure: secure,
     );
 
     final f1 = tempPool.withConnection((conn) async {});
