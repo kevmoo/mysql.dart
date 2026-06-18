@@ -78,90 +78,65 @@ class MySQLColumnType {
       return null;
     }
 
-    if (T == String || T == dynamic) {
-      return value as T;
-    }
-
-    if (T == bool) {
-      if (_value == mysqlColumnTypeTiny && columnLength == 1) {
-        return int.parse(value) > 0 as T;
-      } else {
+    return switch (T) {
+      const (String) || const (dynamic) => value as T,
+      const (bool) => (() {
+        if (_value == mysqlColumnTypeTiny && columnLength == 1) {
+          return int.parse(value) > 0 as T;
+        }
         throw MySQLProtocolException(
           'Can not convert MySQL type $_value to requested type bool',
         );
-      }
-    }
-
-    // convert to int
-    if (T == int) {
-      switch (_value) {
-        // types convertible to dart int
-        case mysqlColumnTypeTiny:
-        case mysqlColumnTypeShort:
-        case mysqlColumnTypeLong:
-        case mysqlColumnTypeLongLong:
-        case mysqlColumnTypeInt24:
-        case mysqlColumnTypeYear:
-          return int.parse(value) as T;
-        default:
-          throw MySQLProtocolException(
-            'Can not convert MySQL type $_value to requested type int',
-          );
-      }
-    }
-
-    if (T == double) {
-      switch (_value) {
-        case mysqlColumnTypeTiny:
-        case mysqlColumnTypeShort:
-        case mysqlColumnTypeLong:
-        case mysqlColumnTypeLongLong:
-        case mysqlColumnTypeInt24:
-        case mysqlColumnTypeFloat:
-        case mysqlColumnTypeDouble:
-          return double.parse(value) as T;
-        default:
-          throw MySQLProtocolException(
-            'Can not convert MySQL type $_value to requested type double',
-          );
-      }
-    }
-
-    if (T == num) {
-      switch (_value) {
-        case mysqlColumnTypeTiny:
-        case mysqlColumnTypeShort:
-        case mysqlColumnTypeLong:
-        case mysqlColumnTypeLongLong:
-        case mysqlColumnTypeInt24:
-        case mysqlColumnTypeFloat:
-        case mysqlColumnTypeDouble:
-          return num.parse(value) as T;
-        default:
-          throw MySQLProtocolException(
-            'Can not convert MySQL type $_value to requested type num',
-          );
-      }
-    }
-
-    if (T == DateTime) {
-      switch (_value) {
-        case mysqlColumnTypeDate:
-        case mysqlColumnTypeDateTime2:
-        case mysqlColumnTypeDateTime:
-        case mysqlColumnTypeTimestamp:
-        case mysqlColumnTypeTimestamp2:
-          return DateTime.parse(value) as T;
-        default:
-          throw MySQLProtocolException(
-            'Can not convert MySQL type $_value to requested type DateTime',
-          );
-      }
-    }
-
-    throw MySQLProtocolException(
-      'Can not convert MySQL type $_value to requested type ${T.runtimeType}',
-    );
+      })(),
+      const (int) => switch (_value) {
+        mysqlColumnTypeTiny ||
+        mysqlColumnTypeShort ||
+        mysqlColumnTypeLong ||
+        mysqlColumnTypeLongLong ||
+        mysqlColumnTypeInt24 ||
+        mysqlColumnTypeYear => int.parse(value) as T,
+        _ => throw MySQLProtocolException(
+          'Can not convert MySQL type $_value to requested type int',
+        ),
+      },
+      const (double) => switch (_value) {
+        mysqlColumnTypeTiny ||
+        mysqlColumnTypeShort ||
+        mysqlColumnTypeLong ||
+        mysqlColumnTypeLongLong ||
+        mysqlColumnTypeInt24 ||
+        mysqlColumnTypeFloat ||
+        mysqlColumnTypeDouble => double.parse(value) as T,
+        _ => throw MySQLProtocolException(
+          'Can not convert MySQL type $_value to requested type double',
+        ),
+      },
+      const (num) => switch (_value) {
+        mysqlColumnTypeTiny ||
+        mysqlColumnTypeShort ||
+        mysqlColumnTypeLong ||
+        mysqlColumnTypeLongLong ||
+        mysqlColumnTypeInt24 ||
+        mysqlColumnTypeFloat ||
+        mysqlColumnTypeDouble => num.parse(value) as T,
+        _ => throw MySQLProtocolException(
+          'Can not convert MySQL type $_value to requested type num',
+        ),
+      },
+      const (DateTime) => switch (_value) {
+        mysqlColumnTypeDate ||
+        mysqlColumnTypeDateTime2 ||
+        mysqlColumnTypeDateTime ||
+        mysqlColumnTypeTimestamp ||
+        mysqlColumnTypeTimestamp2 => DateTime.parse(value) as T,
+        _ => throw MySQLProtocolException(
+          'Can not convert MySQL type $_value to requested type DateTime',
+        ),
+      },
+      _ => throw MySQLProtocolException(
+        'Can not convert MySQL type $_value to requested type ${T.runtimeType}',
+      ),
+    };
   }
 
   Type getBestMatchDartType(int columnLength) {
