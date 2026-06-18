@@ -22,6 +22,7 @@ const mysqlColumnTypeBit = 0x10;
 const mysqlColumnTypeTimestamp2 = 0x11;
 const mysqlColumnTypeDateTime2 = 0x12;
 const mysqlColumnTypeTime2 = 0x13;
+const mysqlColumnTypeJson = 0xf5;
 const mysqlColumnTypeNewDecimal = 0xf6;
 const mysqlColumnTypeEnum = 0xf7;
 const mysqlColumnTypeSet = 0xf8;
@@ -61,6 +62,7 @@ class MySQLColumnType {
   static const dateTime2Type = MySQLColumnType._(mysqlColumnTypeDateTime2);
   static const time2Type = MySQLColumnType._(mysqlColumnTypeTime2);
   static const newDecimalType = MySQLColumnType._(mysqlColumnTypeNewDecimal);
+  static const jsonType = MySQLColumnType._(mysqlColumnTypeJson);
   static const enumType = MySQLColumnType._(mysqlColumnTypeEnum);
   static const setType = MySQLColumnType._(mysqlColumnTypeSet);
   static const tinyBlobType = MySQLColumnType._(mysqlColumnTypeTinyBlob);
@@ -177,6 +179,7 @@ class MySQLColumnType {
       case mysqlColumnTypeBit:
       case mysqlColumnTypeDecimal:
       case mysqlColumnTypeNewDecimal:
+      case mysqlColumnTypeJson:
         return String;
       case mysqlColumnTypeTiny:
         if (columnLength == 1) {
@@ -354,6 +357,7 @@ class MySQLColumnType {
     case mysqlColumnTypeBit:
     case mysqlColumnTypeDecimal:
     case mysqlColumnTypeNewDecimal:
+    case mysqlColumnTypeJson:
       return buffer.getUtf8LengthEncodedString(startOffset);
   }
 

@@ -348,6 +348,13 @@ create table book
     expect(result.affectedRows.toInt(), 0);
   });
 
+  test('testing prepared stmt select JSON', () async {
+    final stmt = await conn.prepare('SELECT CAST(? AS JSON) as col');
+    final result = await stmt.execute(['{"key": "val"}']);
+    expect(result.rows.first.colByName('col'), '{"key": "val"}');
+    await stmt.deallocate();
+  });
+
   test('testing empty result set', () async {
     final result = await conn.execute('SELECT * FROM book WHERE id = 99999');
     expect(result.numOfRows, 0);
@@ -417,7 +424,8 @@ create table book
           col_mediumtext MEDIUMTEXT, 
           col_longtext LONGTEXT,
           col_enum ENUM('test1', 'test2', 'test3') DEFAULT 'test1',
-          col_set SET('test1', 'test2', 'test3') DEFAULT 'test1'
+          col_set SET('test1', 'test2', 'test3') DEFAULT 'test1',
+          col_json JSON
           /*
           TODO: support for spatial types?
           col_geometry GEOMETRY,
@@ -442,7 +450,8 @@ create table book
         col_tinytext = 'test_string', 
         col_text = 'test_string', 
         col_mediumtext = 'test_string', 
-        col_longtext = 'test_string';
+        col_longtext = 'test_string',
+        col_json = '{"key": "val"}';
         """);
     var response = await conn.execute('SELECT * FROM $tableName');
     for (var row in response.rows) {
@@ -484,6 +493,8 @@ create table book
       expect(typedAssoc['col_longtext'].runtimeType, String);
       expect(typedAssoc['col_enum'].runtimeType, String);
       expect(typedAssoc['col_set'].runtimeType, String);
+      expect(typedAssoc['col_json'].runtimeType, String);
+      expect(row.colByName('col_json'), '{"key": "val"}');
     }
 
     var groupedResponse = await conn.execute('''

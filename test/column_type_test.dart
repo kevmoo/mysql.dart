@@ -494,4 +494,53 @@ void main() {
       throwsException,
     );
   });
+
+  test('testing json type', () {
+    final sqlType = MySQLColumnType.create(mysqlColumnTypeJson);
+    expect(sqlType.getBestMatchDartType(0), String);
+
+    final result = sqlType.convertStringValueToProvidedType<String>(
+      '{"key": "value"}',
+    );
+    expect(result, '{"key": "value"}');
+
+    expect(
+      () => sqlType.convertStringValueToProvidedType<int>('{"key": "value"}'),
+      throwsException,
+    );
+  });
+
+  test('testing other datetime types and invalid DateTime conversion', () {
+    final types = [
+      mysqlColumnTypeDateTime,
+      mysqlColumnTypeDateTime2,
+      mysqlColumnTypeTimestamp,
+      mysqlColumnTypeTimestamp2,
+    ];
+
+    for (final type in types) {
+      final sqlType = MySQLColumnType.create(type);
+      final result = sqlType.convertStringValueToProvidedType<DateTime>(
+        '2026-06-18 10:11:12',
+      );
+      expect(result, isA<DateTime>());
+    }
+
+    // Invalid DateTime conversion from non-datetime type
+    final stringType = MySQLColumnType.create(mysqlColumnTypeString);
+    expect(
+      () => stringType.convertStringValueToProvidedType<DateTime>(
+        '2026-06-18 10:11:12',
+      ),
+      throwsException,
+    );
+  });
+
+  test('testing unsupported type conversions', () {
+    final sqlType = MySQLColumnType.create(mysqlColumnTypeString);
+    expect(
+      () => sqlType.convertStringValueToProvidedType<List<int>>('test'),
+      throwsException,
+    );
+  });
 }
