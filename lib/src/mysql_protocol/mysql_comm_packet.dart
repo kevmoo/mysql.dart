@@ -103,11 +103,11 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
       // write param types
       for (final param in params) {
         if (param != null) {
-          buffer.writeUint8(mysqlColumnTypeVarString);
+          buffer.writeUint8(MySQLColumnType.varStringType);
           // unsigned flag
           buffer.writeUint8(0);
         } else {
-          buffer.writeUint8(mysqlColumnTypeNull);
+          buffer.writeUint8(MySQLColumnType.nullType);
           buffer.writeUint8(0);
         }
       }

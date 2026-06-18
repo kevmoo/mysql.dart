@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 void main() {
   test('testing decimal type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeDecimal);
+    final sqlType = MySQLColumnType.decimalType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>('10.00');
     result = sqlType.convertStringValueToProvidedType<String>('-10.00');
@@ -37,7 +37,7 @@ void main() {
   });
 
   test('testing tiny type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeTiny);
+    final sqlType = MySQLColumnType.tinyType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<bool>('1', 1);
     expect(result, true);
@@ -65,7 +65,7 @@ void main() {
   });
 
   test('testing short type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeShort);
+    final sqlType = MySQLColumnType.shortType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<int>('1');
     expect(result, 1);
@@ -91,7 +91,7 @@ void main() {
   });
 
   test('testing long type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeLong);
+    final sqlType = MySQLColumnType.longType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<int>('1');
     expect(result, 1);
@@ -117,7 +117,7 @@ void main() {
   });
 
   test('testing long long type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeLongLong);
+    final sqlType = MySQLColumnType.longLongType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<int>('1');
     expect(result, 1);
@@ -143,7 +143,7 @@ void main() {
   });
 
   test('testing int24 type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeLongLong);
+    final sqlType = MySQLColumnType.longLongType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<int>('1');
     expect(result, 1);
@@ -169,7 +169,7 @@ void main() {
   });
 
   test('testing float type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeFloat);
+    final sqlType = MySQLColumnType.floatType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<double>('10.00');
     expect(result, 10.00);
@@ -195,7 +195,7 @@ void main() {
   });
 
   test('testing double type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeDouble);
+    final sqlType = MySQLColumnType.doubleType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<double>('10.00');
     expect(result, 10.00);
@@ -221,7 +221,7 @@ void main() {
   });
 
   test('testing timestamp type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeTimestamp);
+    final sqlType = MySQLColumnType.timestampType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       '123451234',
@@ -247,7 +247,7 @@ void main() {
   });
 
   test('testing date type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeDate);
+    final sqlType = MySQLColumnType.dateType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       '2022-01-02',
@@ -273,7 +273,7 @@ void main() {
   });
 
   test('testing time type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeDate);
+    final sqlType = MySQLColumnType.dateType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       '02:00:34',
@@ -299,7 +299,7 @@ void main() {
   });
 
   test('testing datetime type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeDate);
+    final sqlType = MySQLColumnType.dateType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       '2022-01-05 02:00:34',
@@ -335,7 +335,7 @@ void main() {
   });
 
   test('testing year type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeYear);
+    final sqlType = MySQLColumnType.yearType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>('2022');
     expect(result, '2022');
@@ -357,7 +357,7 @@ void main() {
   });
 
   test('testing varchar type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeVarChar);
+    final sqlType = MySQLColumnType.vatChartType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       'Some text',
@@ -386,7 +386,7 @@ void main() {
   });
 
   test('testing string type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeString);
+    final sqlType = MySQLColumnType.stringType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       'Some text',
@@ -415,7 +415,7 @@ void main() {
   });
 
   test('testing var string type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeVarString);
+    final sqlType = MySQLColumnType.varStringType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       'Some text',
@@ -444,7 +444,7 @@ void main() {
   });
 
   test('testing enum type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeEnum);
+    final sqlType = MySQLColumnType.enumType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       'process',
@@ -470,7 +470,7 @@ void main() {
   });
 
   test('testing set type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeSet);
+    final sqlType = MySQLColumnType.setType;
 
     dynamic result = sqlType.convertStringValueToProvidedType<String>(
       'process',
@@ -496,7 +496,7 @@ void main() {
   });
 
   test('testing json type', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeJson);
+    final sqlType = MySQLColumnType.jsonType;
     expect(sqlType.getBestMatchDartType(0), String);
 
     final result = sqlType.convertStringValueToProvidedType<String>(
@@ -511,15 +511,14 @@ void main() {
   });
 
   test('testing other datetime types and invalid DateTime conversion', () {
-    final types = [
-      mysqlColumnTypeDateTime,
-      mysqlColumnTypeDateTime2,
-      mysqlColumnTypeTimestamp,
-      mysqlColumnTypeTimestamp2,
+    final sqlTypes = [
+      MySQLColumnType.dateTimeType,
+      MySQLColumnType.dateTime2Type,
+      MySQLColumnType.timestampType,
+      MySQLColumnType.timestamp2Type,
     ];
 
-    for (final type in types) {
-      final sqlType = MySQLColumnType.create(type);
+    for (final sqlType in sqlTypes) {
       final result = sqlType.convertStringValueToProvidedType<DateTime>(
         '2026-06-18 10:11:12',
       );
@@ -527,7 +526,7 @@ void main() {
     }
 
     // Invalid DateTime conversion from non-datetime type
-    final stringType = MySQLColumnType.create(mysqlColumnTypeString);
+    final stringType = MySQLColumnType.stringType;
     expect(
       () => stringType.convertStringValueToProvidedType<DateTime>(
         '2026-06-18 10:11:12',
@@ -537,7 +536,7 @@ void main() {
   });
 
   test('testing unsupported type conversions', () {
-    final sqlType = MySQLColumnType.create(mysqlColumnTypeString);
+    final sqlType = MySQLColumnType.stringType;
     expect(
       () => sqlType.convertStringValueToProvidedType<List<int>>('test'),
       throwsException,
