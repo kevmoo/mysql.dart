@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:tuple/tuple.dart';
-
 import '../../../mysql_protocol.dart';
 import '../../../mysql_protocol_extension.dart';
 
@@ -17,16 +15,15 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
     var values = <String?>[];
 
     for (var x = 0; x < numOfCols; x++) {
-      Tuple2<String, int> value;
       final nextByte = byteData.getUint8(offset);
 
       if (nextByte == 0xfb) {
         values.add(null);
         offset += 1;
       } else {
-        value = buffer.getUtf8LengthEncodedString(offset);
-        values.add(value.item1);
-        offset += value.item2;
+        final (val, len) = buffer.getUtf8LengthEncodedString(offset);
+        values.add(val);
+        offset += len;
       }
     }
 

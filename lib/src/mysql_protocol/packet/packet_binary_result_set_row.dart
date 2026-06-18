@@ -50,14 +50,14 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
       if (isNull) {
         values.add(null);
       } else {
-        final parseResult = parseBinaryColumnData(
+        final (val, len) = parseBinaryColumnData(
           colDefs[x].type.intVal,
           byteData,
           buffer,
           offset,
         );
-        offset += parseResult.item2;
-        values.add(parseResult.item1);
+        offset += len;
+        values.add(val);
       }
     }
 

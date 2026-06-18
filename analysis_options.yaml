@@ -3,3 +3,12 @@ include: package:dart_flutter_team_lints/analysis_options.yaml
 analyzer:
   errors: 
     lines_longer_than_80_chars: ignore
+
+
+linter:
+  rules:
+    - simple_directive_paths
+    - unnecessary_const_in_enum_constructor
+    - unnecessary_ignore
+    - unnecessary_type_name_in_constructor
+    - use_primary_constructors

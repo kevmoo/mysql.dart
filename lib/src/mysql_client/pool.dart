@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../exception.dart';
 import '../../mysql_client.dart';
 
 /// Class to create and manage pool of database connections
@@ -15,6 +16,7 @@ class MySQLConnectionPool {
 
   final List<MySQLConnection> _activeConnections = [];
   final List<MySQLConnection> _idleConnections = [];
+  final List<Completer<MySQLConnection>> _pendingRequests = [];
 
   /// Creates new pool
   ///
@@ -66,6 +68,13 @@ class MySQLConnectionPool {
 
   /// Closes all connections in this pool and frees resources
   Future<void> close() async {
+    for (final completer in _pendingRequests) {
+      completer.completeError(
+        const MySQLClientException('Connection pool has been closed'),
+      );
+    }
+    _pendingRequests.clear();
+
     for (final conn in _allConnections) {
       await conn.close();
     }
@@ -135,16 +144,62 @@ class MySQLConnectionPool {
       conn.onClose(() {
         _idleConnections.remove(conn);
         _activeConnections.remove(conn);
+        _processPendingRequests();
       });
 
       return conn;
     } else {
       // wait for idle connection
-      await Future.doWhile(() => idleConnectionsQty == 0);
-      final conn = _idleConnections.first;
-      _idleConnections.remove(conn);
+      final completer = Completer<MySQLConnection>();
+      _pendingRequests.add(completer);
+      return completer.future;
+    }
+  }
+
+  void _processPendingRequests() {
+    while (_pendingRequests.isNotEmpty) {
+      if (_idleConnections.isNotEmpty) {
+        final completer = _pendingRequests.removeAt(0);
+        final conn = _idleConnections.first;
+        _idleConnections.remove(conn);
+        _activeConnections.add(conn);
+        completer.complete(conn);
+      } else if (allConnectionsQty < maxConnections) {
+        final completer = _pendingRequests.removeAt(0);
+        _createNewConnectionForCompleter(completer);
+        break;
+      } else {
+        break;
+      }
+    }
+  }
+
+  Future<void> _createNewConnectionForCompleter(
+    Completer<MySQLConnection> completer,
+  ) async {
+    try {
+      final conn = await MySQLConnection.createConnection(
+        host: host,
+        port: port,
+        userName: userName,
+        password: _password,
+        databaseName: databaseName,
+        secure: secure,
+        collation: collation,
+      );
+
+      await conn.connect(timeoutMs: timeoutMs);
       _activeConnections.add(conn);
-      return conn;
+
+      conn.onClose(() {
+        _idleConnections.remove(conn);
+        _activeConnections.remove(conn);
+        _processPendingRequests();
+      });
+
+      completer.complete(conn);
+    } catch (e, st) {
+      completer.completeError(e, st);
     }
   }
 
@@ -152,5 +207,6 @@ class MySQLConnectionPool {
     // remove from active
     _activeConnections.remove(conn);
     _idleConnections.add(conn);
+    _processPendingRequests();
   }
 }

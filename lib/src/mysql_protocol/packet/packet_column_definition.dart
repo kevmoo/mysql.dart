@@ -30,25 +30,25 @@ class MySQLColumnDefinitionPacket extends MySQLPacketPayload {
     var offset = 0;
 
     final catalog = buffer.getUtf8LengthEncodedString(offset);
-    offset += catalog.item2;
+    offset += catalog.$2;
 
     final schema = buffer.getUtf8LengthEncodedString(offset);
-    offset += schema.item2;
+    offset += schema.$2;
 
     final table = buffer.getUtf8LengthEncodedString(offset);
-    offset += table.item2;
+    offset += table.$2;
 
     final orgTable = buffer.getUtf8LengthEncodedString(offset);
-    offset += orgTable.item2;
+    offset += orgTable.$2;
 
     final name = buffer.getUtf8LengthEncodedString(offset);
-    offset += name.item2;
+    offset += name.$2;
 
     final orgName = buffer.getUtf8LengthEncodedString(offset);
-    offset += orgName.item2;
+    offset += orgName.$2;
 
     final lengthOfFixedLengthFields = byteData.getVariableEncInt(offset);
-    offset += lengthOfFixedLengthFields.item2;
+    offset += lengthOfFixedLengthFields.$2;
 
     final charset = byteData.getUint16(offset, Endian.little);
     offset += 2;
@@ -60,14 +60,14 @@ class MySQLColumnDefinitionPacket extends MySQLPacketPayload {
     offset += 1;
 
     return MySQLColumnDefinitionPacket(
-      catalog: catalog.item1,
+      catalog: catalog.$1,
       charset: charset,
       columnLength: columnLength,
-      name: name.item1,
-      orgName: orgName.item1,
-      orgTable: orgTable.item1,
-      schema: schema.item1,
-      table: table.item1,
+      name: name.$1,
+      orgName: orgName.$1,
+      orgTable: orgTable.$1,
+      schema: schema.$1,
+      table: table.$1,
       type: MySQLColumnType.create(type),
     );
   }

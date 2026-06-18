@@ -2,18 +2,17 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:tuple/tuple.dart';
 
 import 'exception.dart';
 
 extension MySQLUint8ListExtension on Uint8List {
-  Tuple2<String, int> getUtf8NullTerminatedString(int startOffset) {
+  (String, int) getUtf8NullTerminatedString(int startOffset) {
     final tmp = Uint8List.sublistView(
       this,
       startOffset,
     ).takeWhile((value) => value != 0);
 
-    return Tuple2(utf8.decode(tmp.toList()), tmp.length + 1);
+    return (utf8.decode(tmp.toList()), tmp.length + 1);
   }
 
   String getUtf8StringEOF(int startOffset) {
@@ -21,7 +20,7 @@ extension MySQLUint8ListExtension on Uint8List {
     return utf8.decode(tmp);
   }
 
-  Tuple2<String, int> getUtf8LengthEncodedString(int startOffset) {
+  (String, int) getUtf8LengthEncodedString(int startOffset) {
     final tmp = Uint8List.sublistView(this, startOffset);
     final bd = ByteData.sublistView(tmp);
 
@@ -29,51 +28,50 @@ extension MySQLUint8ListExtension on Uint8List {
 
     final tmp2 = Uint8List.sublistView(
       tmp,
-      strLength.item2,
-      strLength.item2 + strLength.item1.toInt(),
+      strLength.$2,
+      strLength.$2 + strLength.$1.toInt(),
     );
 
-    return Tuple2(utf8.decode(tmp2), strLength.item2 + strLength.item1.toInt());
+    return (utf8.decode(tmp2), strLength.$2 + strLength.$1.toInt());
   }
 }
 
 extension MySQLByteDataExtension on ByteData {
-  Tuple2<BigInt, int> getVariableEncInt(int startOffset) {
-    var firstByte = getUint8(startOffset);
+  (BigInt, int) getVariableEncInt(int startOffset) {
+    final firstByte = getUint8(startOffset);
 
     if (firstByte < 0xfb) {
-      return Tuple2(BigInt.from(firstByte), 1);
+      return (BigInt.from(firstByte), 1);
     }
 
     if (firstByte == 0xfc) {
-      var radix =
-          getUint8(startOffset + 2).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
-
-      return Tuple2(BigInt.parse(radix, radix: 16), 3);
+      final value =
+          getUint8(startOffset + 1) | (getUint8(startOffset + 2) << 8);
+      return (BigInt.from(value), 3);
     }
 
     if (firstByte == 0xfd) {
-      var radix =
-          getUint8(startOffset + 3).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 2).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
-
-      return Tuple2(BigInt.parse(radix, radix: 16), 4);
+      final value =
+          getUint8(startOffset + 1) |
+          (getUint8(startOffset + 2) << 8) |
+          (getUint8(startOffset + 3) << 16);
+      return (BigInt.from(value), 4);
     }
 
     if (firstByte == 0xfe) {
-      var radix =
-          getUint8(startOffset + 8).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 7).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 6).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 5).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 4).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 3).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 2).toRadixString(16).padLeft(2, '0') +
-          getUint8(startOffset + 1).toRadixString(16).padLeft(2, '0');
+      final lowValue =
+          getUint8(startOffset + 1) |
+          (getUint8(startOffset + 2) << 8) |
+          (getUint8(startOffset + 3) << 16) |
+          (getUint8(startOffset + 4) << 24);
+      final highValue =
+          getUint8(startOffset + 5) |
+          (getUint8(startOffset + 6) << 8) |
+          (getUint8(startOffset + 7) << 16) |
+          (getUint8(startOffset + 8) << 24);
+      final value = BigInt.from(lowValue) | (BigInt.from(highValue) << 32);
 
-      return Tuple2(BigInt.parse(radix, radix: 16), 9);
+      return (value, 9);
     }
 
     throw const MySQLProtocolException(

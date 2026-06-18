@@ -9,7 +9,6 @@ environment:
 dependencies: 
   buffer: ^1.1.1
   crypto: ^3.0.1
-  tuple: ^2.0.0
 
 dev_dependencies:
   dart_flutter_team_lints: ^3.0.0

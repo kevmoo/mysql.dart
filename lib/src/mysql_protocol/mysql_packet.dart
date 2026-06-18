@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart' show ByteDataWriter;
 import 'package:crypto/crypto.dart' as crypto;
-import 'package:tuple/tuple.dart' show Tuple2;
 
 import '../../exception.dart';
 import '../../mysql_protocol.dart';
@@ -62,7 +61,7 @@ class MySQLPacket {
     return payloadLength + 4;
   }
 
-  static Tuple2<int, int> decodePacketHeader(Uint8List buffer) {
+  static (int, int) decodePacketHeader(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
@@ -79,17 +78,16 @@ class MySQLPacket {
     // sequence number
     final sequenceNumber = byteData.getUint8(offset);
 
-    return Tuple2(payloadLength, sequenceNumber);
+    return (payloadLength, sequenceNumber);
   }
 
   static MySQLGenericPacketType detectPacketType(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, _) = MySQLPacket.decodePacketHeader(buffer);
     offset += 4;
 
-    final payloadLength = header.item1;
     final type = byteData.getUint8(offset);
 
     if (type == 0x00 && payloadLength >= 7) {
@@ -108,10 +106,10 @@ class MySQLPacket {
   factory MySQLPacket.decodeInitialHandshake(Uint8List buffer) {
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, sequenceNumber) = MySQLPacket.decodePacketHeader(
+      buffer,
+    );
     offset += 4;
-    final payloadLength = header.item1;
-    final sequenceNumber = header.item2;
 
     final payload = MySQLPacketInitialHandshake.decode(
       Uint8List.sublistView(buffer, offset),
@@ -128,10 +126,10 @@ class MySQLPacket {
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, sequenceNumber) = MySQLPacket.decodePacketHeader(
+      buffer,
+    );
     offset += 4;
-    final payloadLength = header.item1;
-    final sequenceNumber = header.item2;
 
     final type = byteData.getUint8(offset);
 
@@ -156,10 +154,10 @@ class MySQLPacket {
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, sequenceNumber) = MySQLPacket.decodePacketHeader(
+      buffer,
+    );
     offset += 4;
-    final payloadLength = header.item1;
-    final sequenceNumber = header.item2;
 
     final type = byteData.getUint8(offset);
 
@@ -192,10 +190,10 @@ class MySQLPacket {
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, sequenceNumber) = MySQLPacket.decodePacketHeader(
+      buffer,
+    );
     offset += 4;
-    final payloadLength = header.item1;
-    final sequenceNumber = header.item2;
 
     final type = byteData.getUint8(offset);
 
@@ -226,10 +224,10 @@ class MySQLPacket {
   factory MySQLPacket.decodeColumnDefPacket(Uint8List buffer) {
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, sequenceNumber) = MySQLPacket.decodePacketHeader(
+      buffer,
+    );
     offset += 4;
-    final payloadLength = header.item1;
-    final sequenceNumber = header.item2;
 
     final payload = MySQLColumnDefinitionPacket.decode(
       Uint8List.sublistView(buffer, offset),
@@ -248,10 +246,10 @@ class MySQLPacket {
   ) {
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, sequenceNumber) = MySQLPacket.decodePacketHeader(
+      buffer,
+    );
     offset += 4;
-    final payloadLength = header.item1;
-    final sequenceNumber = header.item2;
 
     final payload = MySQLResultSetRowPacket.decode(
       Uint8List.sublistView(buffer, offset),
@@ -271,10 +269,10 @@ class MySQLPacket {
   ) {
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, sequenceNumber) = MySQLPacket.decodePacketHeader(
+      buffer,
+    );
     offset += 4;
-    final payloadLength = header.item1;
-    final sequenceNumber = header.item2;
 
     final payload = MySQLBinaryResultSetRowPacket.decode(
       Uint8List.sublistView(buffer, offset),
@@ -292,10 +290,10 @@ class MySQLPacket {
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
-    final header = MySQLPacket.decodePacketHeader(buffer);
+    final (payloadLength, sequenceNumber) = MySQLPacket.decodePacketHeader(
+      buffer,
+    );
     offset += 4;
-    final payloadLength = header.item1;
-    final sequenceNumber = header.item2;
 
     final type = byteData.getUint8(offset);
 
@@ -310,7 +308,7 @@ class MySQLPacket {
       payload = MySQLPacketError.decode(Uint8List.sublistView(buffer, offset));
     } else {
       throw MySQLProtocolException(
-        'Unexpected header type while decoding COM_STMT_PREPARE response: $header',
+        'Unexpected header type while decoding COM_STMT_PREPARE response: ($payloadLength, $sequenceNumber)',
       );
     }
 
