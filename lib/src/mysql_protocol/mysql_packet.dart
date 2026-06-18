@@ -4,7 +4,17 @@ import 'package:buffer/buffer.dart' show ByteDataWriter;
 import 'package:crypto/crypto.dart' as crypto;
 
 import '../../exception.dart';
-import '../../mysql_protocol.dart';
+import 'packet/packet_auth_switch_request.dart';
+import 'packet/packet_binary_result_set_row.dart';
+import 'packet/packet_column_count.dart';
+import 'packet/packet_column_definition.dart';
+import 'packet/packet_eof.dart';
+import 'packet/packet_error.dart';
+import 'packet/packet_extra_auth_data.dart';
+import 'packet/packet_initial_handshake.dart';
+import 'packet/packet_ok.dart';
+import 'packet/packet_result_set_row.dart';
+import 'packet/packet_stmt_prepare_ok.dart';
 
 const mysqlCapFlagClientLongPassword = 0x00000001;
 const mysqlCapFlagClientFoundRows = 0x00000002;

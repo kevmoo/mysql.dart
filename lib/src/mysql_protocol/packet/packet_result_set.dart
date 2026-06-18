@@ -1,5 +1,8 @@
 import 'dart:typed_data';
-import '../../../mysql_protocol.dart';
+
+import '../mysql_packet.dart';
+import 'packet_column_definition.dart';
+import 'packet_result_set_row.dart';
 
 class MySQLPacketResultSet extends MySQLPacketPayload {
   BigInt columnCount;

@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
-import '../../../mysql_protocol.dart';
 import '../../../mysql_protocol_extension.dart';
+import '../mysql_packet.dart';
+import 'packet_initial_handshake.dart';
 
 const _supportedCapabitilies =
     mysqlCapFlagClientProtocol41 |

@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
-import '../../../mysql_protocol.dart';
 import '../../../mysql_protocol_extension.dart';
+import '../mysql_packet.dart';
 
 class MySQLPacketInitialHandshake extends MySQLPacketPayload {
   int protocolVersion;
