@@ -294,7 +294,7 @@ void main() {
   });
 
   test('testing varchar type', () {
-    final sqlType = MySQLColumnType.vatChartType;
+    final sqlType = MySQLColumnType.varCharType;
 
     check(
       sqlType.convertStringValueToProvidedType<String>('Some text'),

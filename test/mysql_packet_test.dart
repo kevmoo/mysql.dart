@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:checks/checks.dart';
 import 'package:hex/hex.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol_extension.dart';
-import 'package:checks/checks.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {
@@ -709,5 +709,49 @@ void main() {
       check(payload.header).equals(0x00);
       check(payload.affectedRows.toInt()).equals(0);
     });
+
+    test(
+      'testing stmt prepare ok packet decoding (standard and Apache Doris truncated)',
+      () {
+        // Standard prepare OK: header 0x00, stmtID 1, cols 2, params 3, filler 0x00, warnings 5
+        final standardBuffer = Uint8List.fromList([
+          0x00,
+          0x01,
+          0x00,
+          0x00,
+          0x00,
+          0x02,
+          0x00,
+          0x03,
+          0x00,
+          0x00,
+          0x05,
+          0x00,
+        ]);
+        final standardPkt = MySQLPacketStmtPrepareOK.decode(standardBuffer);
+        check(standardPkt.header).equals(0x00);
+        check(standardPkt.stmtID).equals(1);
+        check(standardPkt.numOfCols).equals(2);
+        check(standardPkt.numOfParams).equals(3);
+        check(standardPkt.numOfWarnings).equals(5);
+
+        // Truncated Apache Doris prepare OK (omits trailing warnings count)
+        final dorisBuffer = Uint8List.fromList([
+          0x00,
+          0x01,
+          0x00,
+          0x00,
+          0x00,
+          0x02,
+          0x00,
+          0x03,
+          0x00,
+          0x00,
+        ]);
+        final dorisPkt = MySQLPacketStmtPrepareOK.decode(dorisBuffer);
+        check(dorisPkt.stmtID).equals(1);
+        check(dorisPkt.numOfWarnings).equals(0);
+      },
+    );
   });
 }
