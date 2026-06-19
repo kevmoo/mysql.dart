@@ -20,7 +20,7 @@ extension type const MySQLColumnType(int _) implements int {
   static const dateTimeType = MySQLColumnType(0x0c);
   static const yearType = MySQLColumnType(0x0d);
   static const newDateType = MySQLColumnType(0x0e);
-  static const vatChartType = MySQLColumnType(0x0f);
+  static const varCharType = MySQLColumnType(0x0f);
   static const bitType = MySQLColumnType(0x10);
   static const timestamp2Type = MySQLColumnType(0x11);
   static const dateTime2Type = MySQLColumnType(0x12);
@@ -32,7 +32,6 @@ extension type const MySQLColumnType(int _) implements int {
   static const tinyBlobType = MySQLColumnType(0xf9);
   static const mediumBlobType = MySQLColumnType(0xfa);
   static const longBlobType = MySQLColumnType(0xfb);
-  static const blocType = MySQLColumnType(0xfc);
   static const blobType = MySQLColumnType(0xfc);
   static const varStringType = MySQLColumnType(0xfd);
   static const stringType = MySQLColumnType(0xfe);
@@ -107,7 +106,7 @@ extension type const MySQLColumnType(int _) implements int {
   Type getBestMatchDartType(int columnLength) => switch (this) {
     MySQLColumnType.stringType ||
     MySQLColumnType.varStringType ||
-    MySQLColumnType.vatChartType ||
+    MySQLColumnType.varCharType ||
     MySQLColumnType.enumType ||
     MySQLColumnType.setType ||
     MySQLColumnType.geometryType ||
@@ -139,11 +138,10 @@ extension type const MySQLColumnType(int _) implements int {
         (this == MySQLColumnType.tinyBlobType ||
             this == MySQLColumnType.mediumBlobType ||
             this == MySQLColumnType.longBlobType ||
-            this == MySQLColumnType.blocType ||
             this == MySQLColumnType.blobType ||
             this == MySQLColumnType.varStringType ||
             this == MySQLColumnType.stringType ||
-            this == MySQLColumnType.vatChartType ||
+            this == MySQLColumnType.varCharType ||
             this == MySQLColumnType.geometryType ||
             this == MySQLColumnType.bitType);
   }
@@ -288,7 +286,7 @@ extension type const MySQLColumnType(int _) implements int {
       return (result.toString(), startOffset - initialOffset);
     case MySQLColumnType.stringType:
     case MySQLColumnType.varStringType:
-    case MySQLColumnType.vatChartType:
+    case MySQLColumnType.varCharType:
     case MySQLColumnType.enumType:
     case MySQLColumnType.setType:
     case MySQLColumnType.longBlobType:

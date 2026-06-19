@@ -101,7 +101,7 @@ void main() {
           orgName: 'varbin_data',
           charset: 63, // binary collation
           columnLength: 100,
-          type: MySQLColumnType.vatChartType,
+          type: MySQLColumnType.varCharType,
         );
 
         final writer = ByteDataWriter();
@@ -133,7 +133,7 @@ void main() {
           orgName: 'varbin_data',
           charset: 63, // binary collation
           columnLength: 100,
-          type: MySQLColumnType.vatChartType,
+          type: MySQLColumnType.varCharType,
         );
 
         final writer = ByteDataWriter();
@@ -170,7 +170,7 @@ void main() {
           orgName: 'varbin_data',
           charset: 63, // binary collation
           columnLength: 100,
-          type: MySQLColumnType.vatChartType,
+          type: MySQLColumnType.varCharType,
         );
 
         final writer = ByteDataWriter();
