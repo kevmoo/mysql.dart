@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:mysql_client/mysql_client.dart';
+
 import 'package:checks/checks.dart';
+import 'package:mysql_client/mysql_client.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {

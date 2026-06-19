@@ -1,9 +1,9 @@
-import 'package:test/test.dart' show fail;
 import 'dart:io';
 
-import 'package:mysql_client/mysql_client.dart';
 import 'package:checks/checks.dart';
+import 'package:mysql_client/mysql_client.dart';
 import 'package:test/scaffolding.dart';
+import 'package:test/test.dart' show fail;
 
 void testMysqlClient(
   dynamic host,
@@ -398,7 +398,7 @@ create table book
     await conn.execute("""
         CREATE TABLE $tableName (
           col_pk INT AUTO_INCREMENT PRIMARY KEY,
-          
+
           col_bit BIT DEFAULT 1,
           col_tinyint TINYINT DEFAULT 1,
           col_bool BOOL DEFAULT 1,
@@ -413,7 +413,7 @@ create table book
           col_fixed FIXED DEFAULT 1.1,
           col_float FLOAT DEFAULT 1.1,
           col_double DOUBLE DEFAULT 1.1,
-          
+
           col_date DATE DEFAULT '2000-01-01',
           col_time TIME DEFAULT '12:00:00',
           col_datetime DATETIME DEFAULT '2000-01-01 12:00:00',
@@ -425,12 +425,12 @@ create table book
           col_binary BINARY(255) DEFAULT 'test_string',
           col_varbinary VARBINARY(255) DEFAULT 'test_string',
           col_tinyblob TINYBLOB,
-          col_blob BLOB, 
-          col_mediumblob MEDIUMBLOB, 
+          col_blob BLOB,
+          col_mediumblob MEDIUMBLOB,
           col_longblob LONGBLOB,
-          col_tinytext TINYTEXT, 
-          col_text TEXT, 
-          col_mediumtext MEDIUMTEXT, 
+          col_tinytext TINYTEXT,
+          col_text TEXT,
+          col_mediumtext MEDIUMTEXT,
           col_longtext LONGTEXT,
           col_enum ENUM('test1', 'test2', 'test3') DEFAULT 'test1',
           col_set SET('test1', 'test2', 'test3') DEFAULT 'test1',
@@ -451,14 +451,14 @@ create table book
 
     //insert and set values for columns with no defaults
     await conn.execute("""
-        INSERT INTO $tableName SET 
-        col_tinyblob = 'test_string', 
-        col_blob = 'test_string', 
-        col_mediumblob = 'test_string', 
-        col_longblob = 'test_string', 
-        col_tinytext = 'test_string', 
-        col_text = 'test_string', 
-        col_mediumtext = 'test_string', 
+        INSERT INTO $tableName SET
+        col_tinyblob = 'test_string',
+        col_blob = 'test_string',
+        col_mediumblob = 'test_string',
+        col_longblob = 'test_string',
+        col_tinytext = 'test_string',
+        col_text = 'test_string',
+        col_mediumtext = 'test_string',
         col_longtext = 'test_string',
         col_json = '{"key": "val"}';
         """);
@@ -509,11 +509,11 @@ create table book
     }
 
     var groupedResponse = await conn.execute('''
-      SELECT 
-      col_pk, 
-      SUM(col_int) as sum_int, 
-      MAX(col_int) as max_int, 
-      SUM(col_double) as sum_double 
+      SELECT
+      col_pk,
+      SUM(col_int) as sum_int,
+      MAX(col_int) as max_int,
+      SUM(col_double) as sum_double
       FROM $tableName GROUP BY col_pk
       ''');
     for (var row in groupedResponse.rows) {

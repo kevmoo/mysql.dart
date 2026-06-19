@@ -1,9 +1,10 @@
 import 'dart:typed_data';
+
 import 'package:buffer/buffer.dart';
+import 'package:checks/checks.dart';
 import 'package:mysql_client/mysql_client.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol_extension.dart';
-import 'package:checks/checks.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {

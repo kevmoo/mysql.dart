@@ -107,16 +107,7 @@ extension type const MySQLColumnType(int _) implements int {
     _ => false,
   };
 
-  bool get isNumeric => switch (this) {
-    MySQLColumnType.tinyType ||
-    MySQLColumnType.shortType ||
-    MySQLColumnType.longType ||
-    MySQLColumnType.longLongType ||
-    MySQLColumnType.int24Type ||
-    MySQLColumnType.floatType ||
-    MySQLColumnType.doubleType => true,
-    _ => false,
-  };
+  bool get isNumeric => isInteger || isFloatingPoint;
 
   bool get isFloatingPoint =>
       this == MySQLColumnType.floatType || this == MySQLColumnType.doubleType;
