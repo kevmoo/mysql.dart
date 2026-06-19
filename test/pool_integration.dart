@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:mysql_client/mysql_client.dart';
-import 'package:test/test.dart';
+import 'package:checks/checks.dart';
+import 'package:test/scaffolding.dart';
 
 void main() {
   const host = '127.0.0.1';
@@ -43,7 +44,7 @@ void main() {
 
   test('testing pool connection and execution', () async {
     final result = await pool.execute('SELECT 1 + 1 as val');
-    expect(result.rows.first.colByName('val'), '2');
+    check(result.rows.first.colByName('val')).equals('2');
   });
 
   test('testing pool concurrent connection limits', () async {
@@ -70,7 +71,7 @@ void main() {
     await completer1.future;
     await completer2.future;
 
-    expect(pool.activeConnectionsQty, 2);
+    check(pool.activeConnectionsQty).equals(2);
 
     // Try to lease a third connection. Since maxConnections is 2, it should block/queue.
     var thirdLeased = false;
@@ -82,39 +83,33 @@ void main() {
 
     // Wait a brief moment to make sure f3 is blocked
     await Future<void>.delayed(const Duration(milliseconds: 100));
-    expect(thirdLeased, false);
+    check(thirdLeased).equals(false);
 
     // Release the active connections
     completer3.complete();
 
     // Now f3 should resolve
     await Future.wait([f1, f2, f3]);
-    expect(thirdLeased, true);
+    check(thirdLeased).equals(true);
   });
 
   test('testing pool prepare and execution', () async {
     final stmt = await pool.prepare('SELECT CAST(? + ? AS SIGNED) as val');
     final result = await stmt.execute([10, 20]);
-    expect(result.rows.first.colByName('val'), '30');
+    check(result.rows.first.colByName('val')).equals('30');
     await stmt.deallocate();
   });
 
   test('testing pool execution error releases connection', () async {
     final activeBefore = pool.activeConnectionsQty;
-    await expectLater(
-      () => pool.execute('SELECT syntax_error_query'),
-      throwsException,
-    );
-    expect(pool.activeConnectionsQty, activeBefore);
+    await check(pool.execute('SELECT syntax_error_query')).throws<Exception>();
+    check(pool.activeConnectionsQty).equals(activeBefore);
   });
 
   test('testing pool prepare error releases connection', () async {
     final activeBefore = pool.activeConnectionsQty;
-    await expectLater(
-      () => pool.prepare('SELECT syntax_error_query'),
-      throwsException,
-    );
-    expect(pool.activeConnectionsQty, activeBefore);
+    await check(pool.prepare('SELECT syntax_error_query')).throws<Exception>();
+    check(pool.activeConnectionsQty).equals(activeBefore);
   });
 
   test('testing pool transaction', () async {
@@ -122,7 +117,7 @@ void main() {
       final res = await conn.execute('SELECT 42 as val');
       return res.rows.first.colByName('val');
     });
-    expect(result, '42');
+    check(result).equals('42');
   });
 
   test('testing close pool with pending requests', () async {
@@ -147,7 +142,7 @@ void main() {
 
     final f2 = tempPool.withConnection((conn) async {});
 
-    final expectFuture = expectLater(f2, throwsA(isA<MySQLClientException>()));
+    final expectFuture = check(f2).throws<MySQLClientException>();
 
     await tempPool.close();
 
@@ -191,12 +186,12 @@ void main() {
       );
 
       await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(thirdLeased, false);
+      check(thirdLeased).equals(false);
 
       await leasedConn1.close();
 
       await f3;
-      expect(thirdLeased, true);
+      check(thirdLeased).equals(true);
 
       completer3.complete();
       await Future.wait([f1, f2]);
@@ -204,7 +199,7 @@ void main() {
   );
 
   test('testing pool idleConnectionsQty getter', () async {
-    expect(pool.idleConnectionsQty, greaterThanOrEqualTo(0));
+    check(pool.idleConnectionsQty).isGreaterOrEqual(0);
   });
 
   test('testing close pool while connection is in progress', () async {
@@ -223,7 +218,7 @@ void main() {
     await tempPool.close();
 
     // f1 should throw MySQLClientException
-    await expectLater(f1, throwsA(isA<MySQLClientException>()));
+    await check(f1).throws<MySQLClientException>();
   });
 
   test(
@@ -263,7 +258,7 @@ void main() {
       await tempPool.close();
 
       // f2 should throw MySQLClientException
-      await expectLater(f2, throwsA(isA<MySQLClientException>()));
+      await check(f2).throws<MySQLClientException>();
     },
   );
 
@@ -283,8 +278,8 @@ void main() {
     final f2 = tempPool.withConnection((conn) async {});
 
     // Both should fail and throw
-    await expectLater(f1, throwsA(anything));
-    await expectLater(f2, throwsA(anything));
+    await check(f1).throws<Object>();
+    await check(f2).throws<Object>();
 
     await tempPool.close();
   });
