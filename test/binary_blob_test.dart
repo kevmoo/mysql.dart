@@ -79,6 +79,79 @@ void main() {
         );
         expect(row.colBytesAt(0), equals(rawPayload));
         expect(() => row.colAt(0), throwsA(isA<MySQLClientException>()));
+
+        // Verify nullable generic type arguments
+        expect(row.typedColAt<Uint8List?>(0), equals(rawPayload));
+        expect(row.typedColByName<Uint8List?>('payload'), equals(rawPayload));
+      },
+    );
+
+    test(
+      'inbound VARCHAR with binary collation (charset 63) is preserved as raw bytes',
+      () {
+        final varbinColDef = MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'db',
+          table: 'tbl',
+          orgTable: 'tbl',
+          name: 'varbin_data',
+          orgName: 'varbin_data',
+          charset: 63, // binary collation
+          columnLength: 100,
+          type: MySQLColumnType.vatChartType,
+        );
+
+        final writer = ByteDataWriter();
+        writer.writeVariableEncInt(rawPayload.length);
+        writer.write(rawPayload);
+        final textRowPkt = MySQLResultSetRowPacket.decode(writer.toBytes(), 1, [
+          varbinColDef,
+        ]);
+
+        final row = ResultSetRow.decode(
+          colDefs: [varbinColDef],
+          values: textRowPkt.values,
+        );
+        expect(row.colBytesAt(0), equals(rawPayload));
+        expect(row.typedColAt<Uint8List?>(0), equals(rawPayload));
+        expect(() => row.colAt(0), throwsA(isA<MySQLClientException>()));
+      },
+    );
+
+    test(
+      'inbound prepared statement binary row packet preserves VARCHAR (charset 63) raw bytes',
+      () {
+        final varbinColDef = MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'db',
+          table: 'tbl',
+          orgTable: 'tbl',
+          name: 'varbin_data',
+          orgName: 'varbin_data',
+          charset: 63, // binary collation
+          columnLength: 100,
+          type: MySQLColumnType.vatChartType,
+        );
+
+        final writer = ByteDataWriter();
+        writer.writeUint8(0); // packet header 0x00
+        writer.writeUint8(
+          0,
+        ); // null bitmap (1 byte for 1 col + 2 bits = 3 bits)
+        writer.writeVariableEncInt(rawPayload.length);
+        writer.write(rawPayload);
+
+        final binRowPkt = MySQLBinaryResultSetRowPacket.decode(
+          writer.toBytes(),
+          [varbinColDef],
+        );
+        final row = ResultSetRow.decode(
+          colDefs: [varbinColDef],
+          values: binRowPkt.values,
+        );
+
+        expect(row.colBytesAt(0), equals(rawPayload));
+        expect(row.typedColAt<Uint8List?>(0), equals(rawPayload));
       },
     );
   });

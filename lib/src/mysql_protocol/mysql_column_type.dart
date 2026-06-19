@@ -310,6 +310,7 @@ extension type const MySQLColumnType(int _) implements int {
               type == MySQLColumnType.blobType ||
               type == MySQLColumnType.varStringType ||
               type == MySQLColumnType.stringType ||
+              type == MySQLColumnType.vatChartType ||
               type == MySQLColumnType.geometryType ||
               type == MySQLColumnType.bitType);
       if (isBinary) {

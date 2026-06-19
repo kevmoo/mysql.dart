@@ -1467,6 +1467,8 @@ class EmptyResultSet extends IResultSet {
   Iterable<ResultSetColumn> get cols => List<ResultSetColumn>.empty();
 }
 
+Type _typeOf<X>() => X;
+
 /// Represents result set row data
 class ResultSetRow {
   final List<MySQLColumnDefinitionPacket> _colDefs;
@@ -1490,7 +1492,7 @@ class ResultSetRow {
     final value = _values[colIndex];
     if (value == null) return null;
     if (value is Uint8List) return value;
-    if (value is String) return Uint8List.fromList(utf8.encode(value));
+    if (value is String) return utf8.encode(value);
     throw const MySQLClientException('Unexpected column data type');
   }
 
@@ -1518,7 +1520,12 @@ class ResultSetRow {
   ///
   /// Throws [MySQLClientException] if conversion is not possible
   T? typedColAt<T>(int colIndex) {
-    if (T == Uint8List || T == TypedData || T == List<int>) {
+    if (T == Uint8List ||
+        T == _typeOf<Uint8List?>() ||
+        T == TypedData ||
+        T == _typeOf<TypedData?>() ||
+        T == _typeOf<List<int>>() ||
+        T == _typeOf<List<int>?>()) {
       return colBytesAt(colIndex) as T?;
     }
 
@@ -1576,7 +1583,12 @@ class ResultSetRow {
   ///
   /// Throws [MySQLClientException] if conversion is not possible
   T? typedColByName<T>(String columnName) {
-    if (T == Uint8List || T == TypedData || T == List<int>) {
+    if (T == Uint8List ||
+        T == _typeOf<Uint8List?>() ||
+        T == TypedData ||
+        T == _typeOf<TypedData?>() ||
+        T == _typeOf<List<int>>() ||
+        T == _typeOf<List<int>?>()) {
       return colBytesByName(columnName) as T?;
     }
 

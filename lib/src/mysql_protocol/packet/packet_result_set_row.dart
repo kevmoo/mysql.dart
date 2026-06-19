@@ -38,6 +38,7 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
                 type == MySQLColumnType.blobType ||
                 type == MySQLColumnType.varStringType ||
                 type == MySQLColumnType.stringType ||
+                type == MySQLColumnType.vatChartType ||
                 type == MySQLColumnType.geometryType ||
                 type == MySQLColumnType.bitType);
 
