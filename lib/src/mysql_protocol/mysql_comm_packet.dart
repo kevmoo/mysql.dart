@@ -103,7 +103,11 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
       // write param types
       for (final param in params) {
         if (param != null) {
-          buffer.writeUint8(MySQLColumnType.varStringType);
+          if (param is Uint8List || param is TypedData) {
+            buffer.writeUint8(MySQLColumnType.blobType);
+          } else {
+            buffer.writeUint8(MySQLColumnType.varStringType);
+          }
           // unsigned flag
           buffer.writeUint8(0);
         } else {
@@ -114,10 +118,22 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
       // write param values
       for (final param in params) {
         if (param != null) {
-          final value = param.toString();
-          final encodedData = utf8.encode(value);
-          buffer.writeVariableEncInt(encodedData.length);
-          buffer.write(encodedData);
+          if (param is Uint8List) {
+            buffer.writeVariableEncInt(param.length);
+            buffer.write(param);
+          } else if (param is TypedData) {
+            final bytes = param.buffer.asUint8List(
+              param.offsetInBytes,
+              param.lengthInBytes,
+            );
+            buffer.writeVariableEncInt(bytes.length);
+            buffer.write(bytes);
+          } else {
+            final value = param.toString();
+            final encodedData = utf8.encode(value);
+            buffer.writeVariableEncInt(encodedData.length);
+            buffer.write(encodedData);
+          }
         }
       }
     }

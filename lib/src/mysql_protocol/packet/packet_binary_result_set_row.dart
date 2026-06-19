@@ -6,7 +6,7 @@ import '../mysql_packet.dart';
 import 'packet_column_definition.dart';
 
 class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
-  List<String?> values;
+  List<Object?> values;
 
   MySQLBinaryResultSetRowPacket({required this.values});
 
@@ -27,7 +27,7 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
       );
     }
 
-    var values = <String?>[];
+    var values = <Object?>[];
 
     // parse null bitmap
     var nullBitmapSize = ((colDefs.length + 9) / 8).floor();
@@ -54,6 +54,7 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
       } else {
         final (val, len) = parseBinaryColumnData(
           colDefs[x].type,
+          colDefs[x].charset,
           byteData,
           buffer,
           offset,

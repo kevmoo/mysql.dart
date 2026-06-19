@@ -34,6 +34,21 @@ extension MySQLUint8ListExtension on Uint8List {
 
     return (utf8.decode(tmp2), strLength.$2 + strLength.$1.toInt());
   }
+
+  (Uint8List, int) getLengthEncodedBytes(int startOffset) {
+    final tmp = Uint8List.sublistView(this, startOffset);
+    final bd = ByteData.sublistView(tmp);
+
+    final strLength = bd.getVariableEncInt(0);
+
+    final tmp2 = Uint8List.sublistView(
+      tmp,
+      strLength.$2,
+      strLength.$2 + strLength.$1.toInt(),
+    );
+
+    return (tmp2, strLength.$2 + strLength.$1.toInt());
+  }
 }
 
 extension MySQLByteDataExtension on ByteData {
