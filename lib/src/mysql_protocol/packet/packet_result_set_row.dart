@@ -2,17 +2,22 @@ import 'dart:typed_data';
 
 import '../mysql_packet.dart';
 import '../mysql_protocol_extension.dart';
+import 'packet_column_definition.dart';
 
 class MySQLResultSetRowPacket extends MySQLPacketPayload {
-  List<String?> values;
+  List<Object?> values;
 
   MySQLResultSetRowPacket({required this.values});
 
-  factory MySQLResultSetRowPacket.decode(Uint8List buffer, int numOfCols) {
+  factory MySQLResultSetRowPacket.decode(
+    Uint8List buffer,
+    int numOfCols,
+    List<MySQLColumnDefinitionPacket> colDefs,
+  ) {
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
-    var values = <String?>[];
+    var values = <Object?>[];
 
     for (var x = 0; x < numOfCols; x++) {
       final nextByte = byteData.getUint8(offset);
@@ -21,9 +26,16 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
         values.add(null);
         offset += 1;
       } else {
-        final (val, len) = buffer.getUtf8LengthEncodedString(offset);
-        values.add(val);
-        offset += len;
+        final colDef = colDefs[x];
+        if (colDef.type.isBinary(colDef.charset)) {
+          final (bytes, len) = buffer.getLengthEncodedBytes(offset);
+          values.add(bytes);
+          offset += len;
+        } else {
+          final (val, len) = buffer.getUtf8LengthEncodedString(offset);
+          values.add(val);
+          offset += len;
+        }
       }
     }
 

@@ -33,6 +33,7 @@ extension type const MySQLColumnType(int _) implements int {
   static const mediumBlobType = MySQLColumnType(0xfa);
   static const longBlobType = MySQLColumnType(0xfb);
   static const blocType = MySQLColumnType(0xfc);
+  static const blobType = MySQLColumnType(0xfc);
   static const varStringType = MySQLColumnType(0xfd);
   static const stringType = MySQLColumnType(0xfe);
   static const geometryType = MySQLColumnType(0xff);
@@ -110,16 +111,17 @@ extension type const MySQLColumnType(int _) implements int {
       case MySQLColumnType.vatChartType:
       case MySQLColumnType.enumType:
       case MySQLColumnType.setType:
-      case MySQLColumnType.longBlobType:
-      case MySQLColumnType.mediumBlobType:
-      case MySQLColumnType.blocType:
-      case MySQLColumnType.tinyBlobType:
       case MySQLColumnType.geometryType:
       case MySQLColumnType.bitType:
       case MySQLColumnType.decimalType:
       case MySQLColumnType.newDecimalType:
       case MySQLColumnType.jsonType:
         return String;
+      case MySQLColumnType.longBlobType:
+      case MySQLColumnType.mediumBlobType:
+      case MySQLColumnType.blobType:
+      case MySQLColumnType.tinyBlobType:
+        return Uint8List;
       case MySQLColumnType.tinyType:
         if (columnLength == 1) {
           return bool;
@@ -145,10 +147,25 @@ extension type const MySQLColumnType(int _) implements int {
         return String;
     }
   }
+
+  bool isBinary(int charset) {
+    return charset == 63 &&
+        (this == MySQLColumnType.tinyBlobType ||
+            this == MySQLColumnType.mediumBlobType ||
+            this == MySQLColumnType.longBlobType ||
+            this == MySQLColumnType.blocType ||
+            this == MySQLColumnType.blobType ||
+            this == MySQLColumnType.varStringType ||
+            this == MySQLColumnType.stringType ||
+            this == MySQLColumnType.vatChartType ||
+            this == MySQLColumnType.geometryType ||
+            this == MySQLColumnType.bitType);
+  }
 }
 
-(String, int) parseBinaryColumnData(
+(Object, int) parseBinaryColumnData(
   int columnType,
+  int charset,
   ByteData data,
   Uint8List buffer,
   int startOffset,
@@ -290,13 +307,17 @@ extension type const MySQLColumnType(int _) implements int {
     case MySQLColumnType.setType:
     case MySQLColumnType.longBlobType:
     case MySQLColumnType.mediumBlobType:
-    case MySQLColumnType.blocType:
+    case MySQLColumnType.blobType:
     case MySQLColumnType.tinyBlobType:
     case MySQLColumnType.geometryType:
     case MySQLColumnType.bitType:
     case MySQLColumnType.decimalType:
     case MySQLColumnType.newDecimalType:
     case MySQLColumnType.jsonType:
+      final type = MySQLColumnType(columnType);
+      if (type.isBinary(charset)) {
+        return buffer.getLengthEncodedBytes(startOffset);
+      }
       return buffer.getUtf8LengthEncodedString(startOffset);
   }
 

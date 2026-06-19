@@ -568,7 +568,11 @@ class MySQLConnection {
                 return;
               }
 
-              packet = MySQLPacket.decodeResultSetRowPacket(data, colsCount);
+              packet = MySQLPacket.decodeResultSetRowPacket(
+                data,
+                colsCount,
+                colDefs,
+              );
               final values = (packet.payload as MySQLResultSetRowPacket).values;
               sink!.add(ResultSetRow._(colDefs: colDefs, values: values));
               packet = null;
@@ -611,7 +615,11 @@ class MySQLConnection {
                 }
               }
 
-              packet = MySQLPacket.decodeResultSetRowPacket(data, colsCount);
+              packet = MySQLPacket.decodeResultSetRowPacket(
+                data,
+                colsCount,
+                colDefs,
+              );
               break;
             }
         }
@@ -1459,25 +1467,50 @@ class EmptyResultSet extends IResultSet {
   Iterable<ResultSetColumn> get cols => List<ResultSetColumn>.empty();
 }
 
+Type _typeOf<X>() => X;
+
 /// Represents result set row data
 class ResultSetRow {
   final List<MySQLColumnDefinitionPacket> _colDefs;
-  final List<String?> _values;
+  final List<Object?> _values;
 
   ResultSetRow._({required this._colDefs, required this._values});
+
+  factory ResultSetRow.decode({
+    required List<MySQLColumnDefinitionPacket> colDefs,
+    required List<Object?> values,
+  }) = ResultSetRow._;
 
   /// Get number of columns for this row
   int get numOfColumns => _colDefs.length;
 
+  /// Returns the raw uncorrupted byte buffer for the column at [colIndex]
+  Uint8List? colBytesAt(int colIndex) {
+    if (colIndex < 0 || colIndex >= _values.length) {
+      throw const MySQLClientException('Column index is out of range');
+    }
+    final value = _values[colIndex];
+    if (value == null) return null;
+    if (value is Uint8List) return value;
+    if (value is String) return utf8.encode(value);
+    throw const MySQLClientException('Unexpected column data type');
+  }
+
   /// Get column data by column index (starting form 0)
   String? colAt(int colIndex) {
-    if (colIndex >= _values.length) {
+    if (colIndex < 0 || colIndex >= _values.length) {
       throw const MySQLClientException('Column index is out of range');
     }
 
     final value = _values[colIndex];
+    if (value == null) return null;
+    if (value is Uint8List) {
+      throw const MySQLClientException(
+        'Column is binary (BLOB); use colBytesAt instead',
+      );
+    }
 
-    return value;
+    return value as String;
   }
 
   /// Same as [colAt] but performs conversion of string data, into provided type [T], if possible
@@ -1487,6 +1520,25 @@ class ResultSetRow {
   ///
   /// Throws [MySQLClientException] if conversion is not possible
   T? typedColAt<T>(int colIndex) {
+    if (colIndex < 0 || colIndex >= _values.length) {
+      throw const MySQLClientException('Column index is out of range');
+    }
+    final isBinary = _colDefs[colIndex].type.isBinary(
+      _colDefs[colIndex].charset,
+    );
+    if (T == Uint8List ||
+        T == _typeOf<Uint8List?>() ||
+        T == TypedData ||
+        T == _typeOf<TypedData?>() ||
+        T == _typeOf<List<int>>() ||
+        T == _typeOf<List<int>?>() ||
+        (isBinary &&
+            (T == _typeOf<dynamic>() ||
+                T == Object ||
+                T == _typeOf<Object?>()))) {
+      return colBytesAt(colIndex) as T?;
+    }
+
     final value = colAt(colIndex);
     final colDef = _colDefs[colIndex];
 
@@ -1494,6 +1546,19 @@ class ResultSetRow {
       value,
       colDef.columnLength,
     );
+  }
+
+  /// Returns the raw uncorrupted byte buffer for column with [columnName]
+  Uint8List? colBytesByName(String columnName) {
+    final colIndex = _colDefs.indexWhere(
+      (element) => element.name.toLowerCase() == columnName.toLowerCase(),
+    );
+
+    if (colIndex == -1) {
+      throw MySQLClientException('There is no column with name: $columnName');
+    }
+
+    return colBytesAt(colIndex);
   }
 
   /// Get column data by column name
@@ -1511,8 +1576,14 @@ class ResultSetRow {
     }
 
     final value = _values[colIndex];
+    if (value == null) return null;
+    if (value is Uint8List) {
+      throw const MySQLClientException(
+        'Column is binary (BLOB); use colBytesAt instead',
+      );
+    }
 
-    return value;
+    return value as String;
   }
 
   /// Same as [colByName] but performs conversion of string data, into provided type [T], if possible
@@ -1522,12 +1593,31 @@ class ResultSetRow {
   ///
   /// Throws [MySQLClientException] if conversion is not possible
   T? typedColByName<T>(String columnName) {
-    final value = colByName(columnName);
-
     final colIndex = _colDefs.indexWhere(
       (element) => element.name.toLowerCase() == columnName.toLowerCase(),
     );
 
+    if (colIndex == -1) {
+      throw MySQLClientException('There is no column with name: $columnName');
+    }
+
+    final isBinary = _colDefs[colIndex].type.isBinary(
+      _colDefs[colIndex].charset,
+    );
+    if (T == Uint8List ||
+        T == _typeOf<Uint8List?>() ||
+        T == TypedData ||
+        T == _typeOf<TypedData?>() ||
+        T == _typeOf<List<int>>() ||
+        T == _typeOf<List<int>?>() ||
+        (isBinary &&
+            (T == _typeOf<dynamic>() ||
+                T == Object ||
+                T == _typeOf<Object?>()))) {
+      return colBytesAt(colIndex) as T?;
+    }
+
+    final value = colAt(colIndex);
     final colDef = _colDefs[colIndex];
 
     return colDef.type.convertStringValueToProvidedType<T>(
@@ -1543,7 +1633,13 @@ class ResultSetRow {
     var colIndex = 0;
 
     for (final colDef in _colDefs) {
-      result[colDef.name] = _values[colIndex];
+      final val = _values[colIndex];
+      if (val is Uint8List) {
+        throw const MySQLClientException(
+          'Column is binary (BLOB); use colBytesAt instead',
+        );
+      }
+      result[colDef.name] = val as String?;
       colIndex++;
     }
 
@@ -1565,28 +1661,34 @@ class ResultSetRow {
         continue;
       }
 
-      final dartType = colDef.type.getBestMatchDartType(colDef.columnLength);
+      final bestMatch = colDef.type.getBestMatchDartType(colDef.columnLength);
+      final dartType = colDef.type.isBinary(colDef.charset)
+          ? Uint8List
+          : (bestMatch == Uint8List ? String : bestMatch);
 
       dynamic decodedValue;
 
       switch (dartType) {
+        case const (Uint8List):
+          decodedValue = value;
+          break;
         case const (int):
-          decodedValue = int.parse(value);
+          decodedValue = int.parse(value as String);
           break;
         case const (double):
-          decodedValue = double.parse(value);
+          decodedValue = double.parse(value as String);
           break;
         case const (num):
-          decodedValue = num.parse(value);
+          decodedValue = num.parse(value as String);
           break;
         case const (bool):
-          decodedValue = int.parse(value) > 0;
+          decodedValue = int.parse(value as String) > 0;
           break;
         case const (DateTime):
-          decodedValue = DateTime.parse(value);
+          decodedValue = DateTime.parse(value as String);
           break;
         case const (String):
-          decodedValue = value;
+          decodedValue = value as String;
           break;
         default:
           decodedValue = value;

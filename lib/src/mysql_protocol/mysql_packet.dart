@@ -253,6 +253,7 @@ class MySQLPacket {
   factory MySQLPacket.decodeResultSetRowPacket(
     Uint8List buffer,
     int numOfCols,
+    List<MySQLColumnDefinitionPacket> colDefs,
   ) {
     var offset = 0;
 
@@ -264,6 +265,7 @@ class MySQLPacket {
     final payload = MySQLResultSetRowPacket.decode(
       Uint8List.sublistView(buffer, offset),
       numOfCols,
+      colDefs,
     );
 
     return MySQLPacket(
