@@ -751,6 +751,23 @@ void main() {
         final dorisPkt = MySQLPacketStmtPrepareOK.decode(dorisBuffer);
         check(dorisPkt.stmtID).equals(1);
         check(dorisPkt.numOfWarnings).equals(0);
+
+        // Edge case: exactly 1 trailing byte remaining (prevents RangeError on getUint16)
+        final oneByteBuffer = Uint8List.fromList([
+          0x00,
+          0x01,
+          0x00,
+          0x00,
+          0x00,
+          0x02,
+          0x00,
+          0x03,
+          0x00,
+          0x00,
+          0x05,
+        ]);
+        final oneBytePkt = MySQLPacketStmtPrepareOK.decode(oneByteBuffer);
+        check(oneBytePkt.numOfWarnings).equals(0);
       },
     );
   });

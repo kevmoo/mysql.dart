@@ -38,7 +38,7 @@ class MySQLPacketStmtPrepareOK extends MySQLPacketPayload {
 
     // Defensive check because some MySQL-compatible servers (like Apache Doris)
     // omit trailing filler bytes before warning counts.
-    final numWarnings = byteData.lengthInBytes > offset
+    final numWarnings = byteData.lengthInBytes >= offset + 2
         ? byteData.getUint16(offset, Endian.little)
         : 0;
 
