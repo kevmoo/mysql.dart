@@ -1520,12 +1520,22 @@ class ResultSetRow {
   ///
   /// Throws [MySQLClientException] if conversion is not possible
   T? typedColAt<T>(int colIndex) {
+    if (colIndex < 0 || colIndex >= _values.length) {
+      throw const MySQLClientException('Column index is out of range');
+    }
+    final isBinary = _colDefs[colIndex].type.isBinary(
+      _colDefs[colIndex].charset,
+    );
     if (T == Uint8List ||
         T == _typeOf<Uint8List?>() ||
         T == TypedData ||
         T == _typeOf<TypedData?>() ||
         T == _typeOf<List<int>>() ||
-        T == _typeOf<List<int>?>()) {
+        T == _typeOf<List<int>?>() ||
+        (isBinary &&
+            (T == _typeOf<dynamic>() ||
+                T == Object ||
+                T == _typeOf<Object?>()))) {
       return colBytesAt(colIndex) as T?;
     }
 
@@ -1583,21 +1593,31 @@ class ResultSetRow {
   ///
   /// Throws [MySQLClientException] if conversion is not possible
   T? typedColByName<T>(String columnName) {
+    final colIndex = _colDefs.indexWhere(
+      (element) => element.name.toLowerCase() == columnName.toLowerCase(),
+    );
+
+    if (colIndex == -1) {
+      throw MySQLClientException('There is no column with name: $columnName');
+    }
+
+    final isBinary = _colDefs[colIndex].type.isBinary(
+      _colDefs[colIndex].charset,
+    );
     if (T == Uint8List ||
         T == _typeOf<Uint8List?>() ||
         T == TypedData ||
         T == _typeOf<TypedData?>() ||
         T == _typeOf<List<int>>() ||
-        T == _typeOf<List<int>?>()) {
+        T == _typeOf<List<int>?>() ||
+        (isBinary &&
+            (T == _typeOf<dynamic>() ||
+                T == Object ||
+                T == _typeOf<Object?>()))) {
       return colBytesByName(columnName) as T?;
     }
 
     final value = colByName(columnName);
-
-    final colIndex = _colDefs.indexWhere(
-      (element) => element.name.toLowerCase() == columnName.toLowerCase(),
-    );
-
     final colDef = _colDefs[colIndex];
 
     return colDef.type.convertStringValueToProvidedType<T>(
@@ -1641,9 +1661,10 @@ class ResultSetRow {
         continue;
       }
 
+      final bestMatch = colDef.type.getBestMatchDartType(colDef.columnLength);
       final dartType = colDef.type.isBinary(colDef.charset)
           ? Uint8List
-          : colDef.type.getBestMatchDartType(colDef.columnLength);
+          : (bestMatch == Uint8List ? String : bestMatch);
 
       dynamic decodedValue;
 

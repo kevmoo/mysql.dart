@@ -207,5 +207,59 @@ void main() {
         expect(() => row.colBytesAt(-1), throwsA(isA<MySQLClientException>()));
       },
     );
+
+    test(
+      'typedAssoc maps non-binary TEXT columns (blobType w/ charset 33) to String',
+      () {
+        final textColDef = MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'db',
+          table: 'tbl',
+          orgTable: 'tbl',
+          name: 'notes',
+          orgName: 'notes',
+          charset: 33, // utf8
+          columnLength: 1000,
+          type: MySQLColumnType.blobType, // TEXT columns use blobType
+        );
+        final row = ResultSetRow.decode(
+          colDefs: [textColDef],
+          values: ['hello world'],
+        );
+
+        final assoc = row.typedAssoc();
+        expect(assoc['notes'], isA<String>());
+        expect(assoc['notes'], equals('hello world'));
+      },
+    );
+
+    test(
+      'typedColAt / typedColByName return Uint8List for dynamic/Object on binary columns',
+      () {
+        final blobColDef = MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'db',
+          table: 'tbl',
+          orgTable: 'tbl',
+          name: 'data',
+          orgName: 'data',
+          charset: 63,
+          columnLength: 100,
+          type: MySQLColumnType.blobType,
+        );
+        final row = ResultSetRow.decode(
+          colDefs: [blobColDef],
+          values: [rawPayload],
+        );
+
+        expect(row.typedColAt<dynamic>(0), equals(rawPayload));
+        expect(row.typedColAt<Object>(0), equals(rawPayload));
+        expect(row.typedColAt<Object?>(0), equals(rawPayload));
+
+        expect(row.typedColByName<dynamic>('data'), equals(rawPayload));
+        expect(row.typedColByName<Object>('data'), equals(rawPayload));
+        expect(row.typedColByName<Object?>('data'), equals(rawPayload));
+      },
+    );
   });
 }
