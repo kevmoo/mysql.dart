@@ -1614,10 +1614,10 @@ class ResultSetRow {
             (T == _typeOf<dynamic>() ||
                 T == Object ||
                 T == _typeOf<Object?>()))) {
-      return colBytesByName(columnName) as T?;
+      return colBytesAt(colIndex) as T?;
     }
 
-    final value = colByName(columnName);
+    final value = colAt(colIndex);
     final colDef = _colDefs[colIndex];
 
     return colDef.type.convertStringValueToProvidedType<T>(
