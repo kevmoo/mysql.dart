@@ -1,481 +1,426 @@
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
-import 'package:test/test.dart';
+import 'package:checks/checks.dart';
+import 'package:test/scaffolding.dart';
 
 void main() {
   test('testing decimal type', () {
     final sqlType = MySQLColumnType.decimalType;
 
-    expect(sqlType.convertStringValueToProvidedType<String>('10.00'), '10.00');
-    expect(
+    check(
+      sqlType.convertStringValueToProvidedType<String>('10.00'),
+    ).equals('10.00');
+    check(
       sqlType.convertStringValueToProvidedType<String>('-10.00'),
-      '-10.00',
-    );
-    expect(sqlType.convertStringValueToProvidedType<String>('0'), '0');
-    expect(
+    ).equals('-10.00');
+    check(sqlType.convertStringValueToProvidedType<String>('0')).equals('0');
+    check(
       sqlType.convertStringValueToProvidedType<String>('9999.99'),
-      '9999.99',
-    );
-    expect(
+    ).equals('9999.99');
+    check(
       sqlType.convertStringValueToProvidedType<String>('1000123'),
-      '1000123',
-    );
+    ).equals('1000123');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('10.00'),
-      throwsException,
-    );
+    ).throws<Exception>();
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('10.00'),
-      throwsException,
-    );
+    ).throws<Exception>();
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('10.00'),
-      throwsException,
-    );
+    ).throws<Exception>();
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('10.00'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing tiny type', () {
     final sqlType = MySQLColumnType.tinyType;
 
-    expect(sqlType.convertStringValueToProvidedType<bool>('1', 1), true);
-    expect(sqlType.convertStringValueToProvidedType<bool>('0', 1), false);
-    expect(sqlType.convertStringValueToProvidedType<bool>('10', 1), true);
-    expect(sqlType.convertStringValueToProvidedType<int>('1', 1), 1);
-    expect(sqlType.convertStringValueToProvidedType<int>('0', 1), 0);
-    expect(sqlType.convertStringValueToProvidedType<int>('2', 1), 2);
-    expect(sqlType.convertStringValueToProvidedType<double>('10', 1), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<num>('10', 1), 10);
-    expect(sqlType.convertStringValueToProvidedType<String>('10', 1), '10');
+    check(sqlType.convertStringValueToProvidedType<bool>('1', 1)).equals(true);
+    check(sqlType.convertStringValueToProvidedType<bool>('0', 1)).equals(false);
+    check(sqlType.convertStringValueToProvidedType<bool>('10', 1)).equals(true);
+    check(sqlType.convertStringValueToProvidedType<int>('1', 1)).equals(1);
+    check(sqlType.convertStringValueToProvidedType<int>('0', 1)).equals(0);
+    check(sqlType.convertStringValueToProvidedType<int>('2', 1)).equals(2);
+    check(
+      sqlType.convertStringValueToProvidedType<double>('10', 1),
+    ).equals(10.00);
+    check(sqlType.convertStringValueToProvidedType<num>('10', 1)).equals(10);
+    check(
+      sqlType.convertStringValueToProvidedType<String>('10', 1),
+    ).equals('10');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('1', 2),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing short type', () {
     final sqlType = MySQLColumnType.shortType;
 
-    expect(sqlType.convertStringValueToProvidedType<int>('1'), 1);
-    expect(sqlType.convertStringValueToProvidedType<int>('0'), 0);
-    expect(sqlType.convertStringValueToProvidedType<int>('2'), 2);
-    expect(sqlType.convertStringValueToProvidedType<double>('10'), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<num>('10'), 10);
-    expect(sqlType.convertStringValueToProvidedType<String>('10'), '10');
+    check(sqlType.convertStringValueToProvidedType<int>('1')).equals(1);
+    check(sqlType.convertStringValueToProvidedType<int>('0')).equals(0);
+    check(sqlType.convertStringValueToProvidedType<int>('2')).equals(2);
+    check(sqlType.convertStringValueToProvidedType<double>('10')).equals(10.00);
+    check(sqlType.convertStringValueToProvidedType<num>('10')).equals(10);
+    check(sqlType.convertStringValueToProvidedType<String>('10')).equals('10');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('1'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('0'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing long type', () {
     final sqlType = MySQLColumnType.longType;
 
-    expect(sqlType.convertStringValueToProvidedType<int>('1'), 1);
-    expect(sqlType.convertStringValueToProvidedType<int>('0'), 0);
-    expect(sqlType.convertStringValueToProvidedType<int>('2'), 2);
-    expect(sqlType.convertStringValueToProvidedType<double>('10'), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<num>('10'), 10);
-    expect(sqlType.convertStringValueToProvidedType<String>('10'), '10');
+    check(sqlType.convertStringValueToProvidedType<int>('1')).equals(1);
+    check(sqlType.convertStringValueToProvidedType<int>('0')).equals(0);
+    check(sqlType.convertStringValueToProvidedType<int>('2')).equals(2);
+    check(sqlType.convertStringValueToProvidedType<double>('10')).equals(10.00);
+    check(sqlType.convertStringValueToProvidedType<num>('10')).equals(10);
+    check(sqlType.convertStringValueToProvidedType<String>('10')).equals('10');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('1'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('0'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing long long type', () {
     final sqlType = MySQLColumnType.longLongType;
 
-    expect(sqlType.convertStringValueToProvidedType<int>('1'), 1);
-    expect(sqlType.convertStringValueToProvidedType<int>('0'), 0);
-    expect(sqlType.convertStringValueToProvidedType<int>('2'), 2);
-    expect(sqlType.convertStringValueToProvidedType<double>('10'), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<num>('10'), 10);
-    expect(sqlType.convertStringValueToProvidedType<String>('10'), '10');
+    check(sqlType.convertStringValueToProvidedType<int>('1')).equals(1);
+    check(sqlType.convertStringValueToProvidedType<int>('0')).equals(0);
+    check(sqlType.convertStringValueToProvidedType<int>('2')).equals(2);
+    check(sqlType.convertStringValueToProvidedType<double>('10')).equals(10.00);
+    check(sqlType.convertStringValueToProvidedType<num>('10')).equals(10);
+    check(sqlType.convertStringValueToProvidedType<String>('10')).equals('10');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('1'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('0'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing int24 type', () {
     final sqlType = MySQLColumnType.longLongType;
 
-    expect(sqlType.convertStringValueToProvidedType<int>('1'), 1);
-    expect(sqlType.convertStringValueToProvidedType<int>('0'), 0);
-    expect(sqlType.convertStringValueToProvidedType<int>('2'), 2);
-    expect(sqlType.convertStringValueToProvidedType<double>('10'), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<num>('10'), 10);
-    expect(sqlType.convertStringValueToProvidedType<String>('10'), '10');
+    check(sqlType.convertStringValueToProvidedType<int>('1')).equals(1);
+    check(sqlType.convertStringValueToProvidedType<int>('0')).equals(0);
+    check(sqlType.convertStringValueToProvidedType<int>('2')).equals(2);
+    check(sqlType.convertStringValueToProvidedType<double>('10')).equals(10.00);
+    check(sqlType.convertStringValueToProvidedType<num>('10')).equals(10);
+    check(sqlType.convertStringValueToProvidedType<String>('10')).equals('10');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('1'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('0'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing float type', () {
     final sqlType = MySQLColumnType.floatType;
 
-    expect(sqlType.convertStringValueToProvidedType<double>('10.00'), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<double>('-10.00'), -10.00);
-    expect(sqlType.convertStringValueToProvidedType<num>('10.00'), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<String>('10.00'), '10.00');
+    check(
+      sqlType.convertStringValueToProvidedType<double>('10.00'),
+    ).equals(10.00);
+    check(
+      sqlType.convertStringValueToProvidedType<double>('-10.00'),
+    ).equals(-10.00);
+    check(sqlType.convertStringValueToProvidedType<num>('10.00')).equals(10.00);
+    check(
+      sqlType.convertStringValueToProvidedType<String>('10.00'),
+    ).equals('10.00');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('1.0'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('1.0'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('0.0'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing double type', () {
     final sqlType = MySQLColumnType.doubleType;
 
-    expect(sqlType.convertStringValueToProvidedType<double>('10.00'), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<double>('-10.00'), -10.00);
-    expect(sqlType.convertStringValueToProvidedType<num>('10.00'), 10.00);
-    expect(sqlType.convertStringValueToProvidedType<String>('10.00'), '10.00');
+    check(
+      sqlType.convertStringValueToProvidedType<double>('10.00'),
+    ).equals(10.00);
+    check(
+      sqlType.convertStringValueToProvidedType<double>('-10.00'),
+    ).equals(-10.00);
+    check(sqlType.convertStringValueToProvidedType<num>('10.00')).equals(10.00);
+    check(
+      sqlType.convertStringValueToProvidedType<String>('10.00'),
+    ).equals('10.00');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('1.0'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('1.0'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('0.0'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing timestamp type', () {
     final sqlType = MySQLColumnType.timestampType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('123451234'),
-      '123451234',
-    );
+    ).equals('123451234');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('123451234'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('123451234'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('123451234'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('123451234'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing date type', () {
     final sqlType = MySQLColumnType.dateType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('2022-01-02'),
-      '2022-01-02',
-    );
+    ).equals('2022-01-02');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('2022-01-02'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('2022-01-02'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('2022-01-02'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('2022-01-02'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing time type', () {
     final sqlType = MySQLColumnType.dateType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('02:00:34'),
-      '02:00:34',
-    );
+    ).equals('02:00:34');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('02:00:34'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('02:00:34'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('02:00:34'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('02:00:34'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing datetime type', () {
     final sqlType = MySQLColumnType.dateType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('2022-01-05 02:00:34'),
-      '2022-01-05 02:00:34',
-    );
+    ).equals('2022-01-05 02:00:34');
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<DateTime>('2022-01-05 02:00:34'),
-      DateTime.parse('2022-01-05 02:00:34'),
-    );
+    ).equals(DateTime.parse('2022-01-05 02:00:34'));
 
-    expect(
+    check(
       () =>
           sqlType.convertStringValueToProvidedType<int>('2022-01-05 02:00:34'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>(
         '2022-01-05 02:00:34',
       ),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () =>
           sqlType.convertStringValueToProvidedType<num>('2022-01-05 02:00:34'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () =>
           sqlType.convertStringValueToProvidedType<bool>('2022-01-05 02:00:34'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing year type', () {
     final sqlType = MySQLColumnType.yearType;
 
-    expect(sqlType.convertStringValueToProvidedType<String>('2022'), '2022');
-    expect(sqlType.convertStringValueToProvidedType<int>('2022'), 2022);
+    check(
+      sqlType.convertStringValueToProvidedType<String>('2022'),
+    ).equals('2022');
+    check(sqlType.convertStringValueToProvidedType<int>('2022')).equals(2022);
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('2022'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing varchar type', () {
     final sqlType = MySQLColumnType.vatChartType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('Some text'),
-      'Some text',
-    );
+    ).equals('Some text');
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('Какой-то текст'),
-      'Какой-то текст',
-    );
+    ).equals('Какой-то текст');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('2022'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing string type', () {
     final sqlType = MySQLColumnType.stringType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('Some text'),
-      'Some text',
-    );
+    ).equals('Some text');
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('Какой-то текст'),
-      'Какой-то текст',
-    );
+    ).equals('Какой-то текст');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('2022'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing var string type', () {
     final sqlType = MySQLColumnType.varStringType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('Some text'),
-      'Some text',
-    );
+    ).equals('Some text');
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('Какой-то текст'),
-      'Какой-то текст',
-    );
+    ).equals('Какой-то текст');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('2022'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('2022'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing enum type', () {
     final sqlType = MySQLColumnType.enumType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('process'),
-      'process',
-    );
+    ).equals('process');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('process'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('process'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('process'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('process'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing set type', () {
     final sqlType = MySQLColumnType.setType;
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('process'),
-      'process',
-    );
+    ).equals('process');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('process'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<double>('process'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<num>('process'),
-      throwsException,
-    );
-    expect(
+    ).throws<Exception>();
+    check(
       () => sqlType.convertStringValueToProvidedType<bool>('process'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing json type', () {
     final sqlType = MySQLColumnType.jsonType;
-    expect(sqlType.getBestMatchDartType(0), String);
+    check(sqlType.getBestMatchDartType(0)).equals(String);
 
-    expect(
+    check(
       sqlType.convertStringValueToProvidedType<String>('{"key": "value"}'),
-      '{"key": "value"}',
-    );
+    ).equals('{"key": "value"}');
 
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<int>('{"key": "value"}'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing other datetime types and invalid DateTime conversion', () {
@@ -487,29 +432,26 @@ void main() {
     ];
 
     for (final sqlType in sqlTypes) {
-      expect(
+      check(
         sqlType.convertStringValueToProvidedType<DateTime>(
           '2026-06-18 10:11:12',
         ),
-        isA<DateTime>(),
-      );
+      ).isA<DateTime>();
     }
 
     // Invalid DateTime conversion from non-datetime type
     final stringType = MySQLColumnType.stringType;
-    expect(
+    check(
       () => stringType.convertStringValueToProvidedType<DateTime>(
         '2026-06-18 10:11:12',
       ),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 
   test('testing unsupported type conversions', () {
     final sqlType = MySQLColumnType.stringType;
-    expect(
+    check(
       () => sqlType.convertStringValueToProvidedType<List<int>>('test'),
-      throwsException,
-    );
+    ).throws<Exception>();
   });
 }

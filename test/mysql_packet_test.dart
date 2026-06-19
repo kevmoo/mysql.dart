@@ -4,7 +4,8 @@ import 'package:buffer/buffer.dart';
 import 'package:hex/hex.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol_extension.dart';
-import 'package:test/test.dart';
+import 'package:checks/checks.dart';
+import 'package:test/scaffolding.dart';
 
 void main() {
   group('testing variable length int', () {
@@ -12,20 +13,20 @@ void main() {
       test('decoding int value 16', () {
         var buff = ByteData.sublistView(Uint8List.fromList([16]));
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 16);
-        expect(actual.$2, 1);
+        check(actual.$1.toInt()).equals(16);
+        check(actual.$2).equals(1);
       });
       test('decoding int value 0', () {
         var buff = ByteData.sublistView(Uint8List.fromList([0]));
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 0);
-        expect(actual.$2, 1);
+        check(actual.$1.toInt()).equals(0);
+        check(actual.$2).equals(1);
       });
       test('decoding int value 250', () {
         var buff = ByteData.sublistView(Uint8List.fromList([250]));
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 250);
-        expect(actual.$2, 1);
+        check(actual.$1.toInt()).equals(250);
+        check(actual.$2).equals(1);
       });
     });
 
@@ -33,14 +34,14 @@ void main() {
       test('decoding int value 251', () {
         var buff = ByteData.sublistView(Uint8List.fromList([0xfc, 0xfb, 0x00]));
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 251);
-        expect(actual.$2, 3);
+        check(actual.$1.toInt()).equals(251);
+        check(actual.$2).equals(3);
       });
       test('decoding int value 252', () {
         var buff = ByteData.sublistView(Uint8List.fromList([0xfc, 0xfc, 0x00]));
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 252);
-        expect(actual.$2, 3);
+        check(actual.$1.toInt()).equals(252);
+        check(actual.$2).equals(3);
       });
     });
 
@@ -50,24 +51,24 @@ void main() {
           Uint8List.fromList([0xfd, 0x00, 0x00, 0x00]),
         );
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 0);
-        expect(actual.$2, 4);
+        check(actual.$1.toInt()).equals(0);
+        check(actual.$2).equals(4);
       });
       test('decoding int value 1048576', () {
         var buff = ByteData.sublistView(
           Uint8List.fromList([0xfd, 0x00, 0x00, 0x10]),
         );
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 1048576);
-        expect(actual.$2, 4);
+        check(actual.$1.toInt()).equals(1048576);
+        check(actual.$2).equals(4);
       });
       test('decoding int value 1048613', () {
         var buff = ByteData.sublistView(
           Uint8List.fromList([0xfd, 0x25, 0x00, 0x10]),
         );
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 1048613);
-        expect(actual.$2, 4);
+        check(actual.$1.toInt()).equals(1048613);
+        check(actual.$2).equals(4);
       });
     });
     group('test decoding eight byte ints', () {
@@ -86,8 +87,8 @@ void main() {
           ]),
         );
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 0);
-        expect(actual.$2, 9);
+        check(actual.$1.toInt()).equals(0);
+        check(actual.$2).equals(9);
       });
       test('decoding int value 21', () {
         var buff = ByteData.sublistView(
@@ -104,8 +105,8 @@ void main() {
           ]),
         );
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 21);
-        expect(actual.$2, 9);
+        check(actual.$1.toInt()).equals(21);
+        check(actual.$2).equals(9);
       });
       test('decoding int value 4294967295', () {
         var buff = ByteData.sublistView(
@@ -122,8 +123,8 @@ void main() {
           ]),
         );
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toInt(), 4294967295);
-        expect(actual.$2, 9);
+        check(actual.$1.toInt()).equals(4294967295);
+        check(actual.$2).equals(9);
       });
       test('decoding int value 1099511627775', () {
         var buff = ByteData.sublistView(
@@ -140,88 +141,64 @@ void main() {
           ]),
         );
         var actual = buff.getVariableEncInt(0);
-        expect(actual.$1.toString(), '1099511627775');
-        expect(actual.$2, 9);
+        check(actual.$1.toString()).equals('1099511627775');
+        check(actual.$2).equals(9);
       });
       test('test encoding int value 0', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(0);
-        expect(writer.toBytes(), [0x00]);
+        check(writer.toBytes()).deepEquals([0x00]);
       });
       test('test encoding int value 1', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(1);
-        expect(writer.toBytes(), [0x01]);
+        check(writer.toBytes()).deepEquals([0x01]);
       });
       test('test encoding int value 250', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(250);
-        expect(writer.toBytes(), [0xfa]);
+        check(writer.toBytes()).deepEquals([0xfa]);
       });
       test('test encoding int value 251', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(251);
-        expect(writer.toBytes(), [0xfc, 0xfb, 0x00]);
+        check(writer.toBytes()).deepEquals([0xfc, 0xfb, 0x00]);
       });
       test('test encoding int value 252', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(252);
-        expect(writer.toBytes(), [0xfc, 0xfc, 0x00]);
+        check(writer.toBytes()).deepEquals([0xfc, 0xfc, 0x00]);
       });
       test('test encoding int value 65536', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(65536);
-        expect(writer.toBytes(), [0xfd, 0x00, 0x00, 0x01]);
+        check(writer.toBytes()).deepEquals([0xfd, 0x00, 0x00, 0x01]);
       });
       test('test encoding int value 65537', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(65537);
-        expect(writer.toBytes(), [0xfd, 0x01, 0x00, 0x01]);
+        check(writer.toBytes()).deepEquals([0xfd, 0x01, 0x00, 0x01]);
       });
       test('test encoding int value 16777216', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(16777216);
-        expect(writer.toBytes(), [
-          0xfe,
-          0x00,
-          0x00,
-          0x00,
-          0x01,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
-        ]);
+        check(
+          writer.toBytes(),
+        ).deepEquals([0xfe, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
       });
       test('test encoding int value 16777217', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(16777217);
-        expect(writer.toBytes(), [
-          0xfe,
-          0x01,
-          0x00,
-          0x00,
-          0x01,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
-        ]);
+        check(
+          writer.toBytes(),
+        ).deepEquals([0xfe, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
       });
       test('test encoding int value 9223372036854775807', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(9223372036854775807);
-        expect(writer.toBytes(), [
-          0xfe,
-          0xff,
-          0xff,
-          0xff,
-          0xff,
-          0xff,
-          0xff,
-          0xff,
-          0x7f,
-        ]);
+        check(
+          writer.toBytes(),
+        ).deepEquals([0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
       });
     });
   });
@@ -230,14 +207,14 @@ void main() {
     test('testing getNullTerminatedString 1', () {
       final buffer = Uint8List.fromList([0x61, 0x62, 0x00]);
       final actual = buffer.getUtf8NullTerminatedString(0);
-      expect(actual.$1, 'ab');
-      expect(actual.$2, 3);
+      check(actual.$1).equals('ab');
+      check(actual.$2).equals(3);
     });
     test('testing getNullTerminatedString 2', () {
       final buffer = Uint8List.fromList([0x10, 0x61, 0x62, 0x00, 0x12, 0xff]);
       final actual = buffer.getUtf8NullTerminatedString(1);
-      expect(actual.$1, 'ab');
-      expect(actual.$2, 3);
+      check(actual.$1).equals('ab');
+      check(actual.$2).equals(3);
     });
     test('testing getNullTerminatedString multibyte 1', () {
       final buffer = Uint8List.fromList([
@@ -252,8 +229,8 @@ void main() {
         0x00,
       ]);
       final actual = buffer.getUtf8NullTerminatedString(0);
-      expect(actual.$1, 'тест');
-      expect(actual.$2, 9);
+      check(actual.$1).equals('тест');
+      check(actual.$2).equals(9);
     });
     test('testing getNullTerminatedString multibyte 2', () {
       final buffer = Uint8List.fromList([
@@ -272,18 +249,18 @@ void main() {
         0x02,
       ]);
       final actual = buffer.getUtf8NullTerminatedString(2);
-      expect(actual.$1, 'тест');
-      expect(actual.$2, 9);
+      check(actual.$1).equals('тест');
+      check(actual.$2).equals(9);
     });
     test('testing getStringEOF 1', () {
       final buffer = Uint8List.fromList([0x61, 0x62]);
       final actual = buffer.getUtf8StringEOF(0);
-      expect(actual, 'ab');
+      check(actual).equals('ab');
     });
     test('testing getStringEOF 2', () {
       final buffer = Uint8List.fromList([0xff, 0xff, 0x61, 0x62]);
       final actual = buffer.getUtf8StringEOF(2);
-      expect(actual, 'ab');
+      check(actual).equals('ab');
     });
     test('testing getStringEOF multibyte 1', () {
       final buffer = Uint8List.fromList([
@@ -297,7 +274,7 @@ void main() {
         0x82,
       ]);
       final actual = buffer.getUtf8StringEOF(0);
-      expect(actual, 'тест');
+      check(actual).equals('тест');
     });
     test('testing getStringEOF multibyte 2', () {
       final buffer = Uint8List.fromList([
@@ -313,19 +290,19 @@ void main() {
         0x82,
       ]);
       final actual = buffer.getUtf8StringEOF(2);
-      expect(actual, 'тест');
+      check(actual).equals('тест');
     });
     test('testing getLengthEncodedString 1', () {
       final buffer = Uint8List.fromList([0x03, 0x64, 0x65, 0x66]);
       final actual = buffer.getUtf8LengthEncodedString(0);
-      expect(actual.$1, 'def');
-      expect(actual.$2, 4);
+      check(actual.$1).equals('def');
+      check(actual.$2).equals(4);
     });
     test('testing getLengthEncodedString 2', () {
       final buffer = Uint8List.fromList([0x03, 0x64, 0x65, 0x66, 0xff, 0xcc]);
       final actual = buffer.getUtf8LengthEncodedString(0);
-      expect(actual.$1, 'def');
-      expect(actual.$2, 4);
+      check(actual.$1).equals('def');
+      check(actual.$2).equals(4);
     });
     test('testing getLengthEncodedString 3', () {
       final buffer = Uint8List.fromList([
@@ -339,8 +316,8 @@ void main() {
         0xcc,
       ]);
       final actual = buffer.getUtf8LengthEncodedString(2);
-      expect(actual.$1, 'def');
-      expect(actual.$2, 4);
+      check(actual.$1).equals('def');
+      check(actual.$2).equals(4);
     });
     test('testing getLengthEncodedString for long string', () {
       final buffer = Uint8List.fromList([
@@ -669,11 +646,10 @@ void main() {
         0x65,
       ]);
       final actual = buffer.getUtf8LengthEncodedString(0);
-      expect(
-        actual.$1,
+      check(actual.$1).equals(
         'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
       );
-      expect(actual.$2, 323);
+      check(actual.$2).equals(323);
     });
   });
 
@@ -686,58 +662,52 @@ void main() {
       );
 
       final packet = MySQLPacket.decodeInitialHandshake(buffer);
-      expect(packet.payload, isA<MySQLPacketInitialHandshake>());
-      expect(packet.sequenceID, 0);
-      expect(packet.payloadLength, 77);
+      check(packet.payload).isA<MySQLPacketInitialHandshake>();
+      check(packet.sequenceID).equals(0);
+      check(packet.payloadLength).equals(77);
 
       final payload = packet.payload as MySQLPacketInitialHandshake;
-      expect(payload.protocolVersion, 10);
-      expect(payload.serverVersion, '5.7.35-38');
-      expect(payload.connectionID, 123);
-      expect(
+      check(payload.protocolVersion).equals(10);
+      check(payload.serverVersion).equals('5.7.35-38');
+      check(payload.connectionID).equals(123);
+      check(
         payload.authPluginDataPart1,
-        Uint8List.fromList(HEX.decode('181e73526349597c')),
-      );
-      expect(
-        payload.authPluginDataPart2,
+      ).deepEquals(Uint8List.fromList(HEX.decode('181e73526349597c')));
+      check(payload.authPluginDataPart2).isNotNull().deepEquals(
         Uint8List.fromList(HEX.decode('07317a2531721d587825181d00')),
       );
 
-      expect(payload.authPluginName, 'mysql_native_password');
+      check(payload.authPluginName).equals('mysql_native_password');
 
       //actual network data 0xffffffc1
-      expect(payload.capabilityFlags, 0xc1ffffff);
+      check(payload.capabilityFlags).equals(0xc1ffffff);
 
-      expect(
+      check(
         payload.capabilityFlags & mysqlCapFlagClientMultiStatements,
-        greaterThan(0),
-      );
-      expect(
+      ).isGreaterThan(0);
+      check(
         payload.capabilityFlags & mysqlCapFlagClientMultiResults,
-        greaterThan(0),
-      );
-      expect(
+      ).isGreaterThan(0);
+      check(
         payload.capabilityFlags & mysqlCapFlagClientPluginAuth,
-        greaterThan(0),
-      );
-      expect(
+      ).isGreaterThan(0);
+      check(
         payload.capabilityFlags & mysqlCapFlagClientPluginAuth,
-        greaterThan(0),
-      );
+      ).isGreaterThan(0);
     });
 
     test('testing response ok packet', () {
       final buffer = Uint8List.fromList(HEX.decode('0700000200000002000000'));
       final packet = MySQLPacket.decodeGenericPacket(buffer);
-      expect(packet.payload, isA<MySQLPacketOK>());
-      expect(packet.payloadLength, 7);
-      expect(packet.sequenceID, 2);
-      expect(packet.isOkPacket(), true);
-      expect(packet.isEOFPacket(), false);
-      expect(packet.isErrorPacket(), false);
+      check(packet.payload).isA<MySQLPacketOK>();
+      check(packet.payloadLength).equals(7);
+      check(packet.sequenceID).equals(2);
+      check(packet.isOkPacket()).equals(true);
+      check(packet.isEOFPacket()).equals(false);
+      check(packet.isErrorPacket()).equals(false);
       final payload = packet.payload as MySQLPacketOK;
-      expect(payload.header, 0x00);
-      expect(payload.affectedRows.toInt(), 0);
+      check(payload.header).equals(0x00);
+      check(payload.affectedRows.toInt()).equals(0);
     });
   });
 }

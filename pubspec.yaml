@@ -10,6 +10,7 @@ dependencies:
   crypto: ^3.0.1
 
 dev_dependencies:
+  checks: ^0.3.1
   coverage: ^1.15.1
   dart_flutter_team_lints: ^3.0.0
   hex: ^0.2.0

@@ -3,7 +3,8 @@ import 'package:buffer/buffer.dart';
 import 'package:mysql_client/mysql_client.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol_extension.dart';
-import 'package:test/test.dart';
+import 'package:checks/checks.dart';
+import 'package:test/scaffolding.dart';
 
 void main() {
   group('Binary BLOB Wire Handling Verification', () {
@@ -28,24 +29,24 @@ void main() {
         final bd = ByteData.sublistView(encoded);
 
         // Verify packet structure
-        expect(bd.getUint8(0), equals(0x17)); // COM_STMT_EXECUTE
-        expect(bd.getUint32(1, Endian.little), equals(1)); // stmtID
+        check(bd.getUint8(0)).equals(0x17); // COM_STMT_EXECUTE
+        check(bd.getUint32(1, Endian.little)).equals(1); // stmtID
 
         // Null bitmap (size 1 byte for 2 params)
         // offset = 1 + 4 + 1(flags) + 4(iteration) = 10
         final nullBitmap = bd.getUint8(10);
-        expect(nullBitmap, equals(0)); // no nulls
+        check(nullBitmap).equals(0); // no nulls
 
         // new_params_bound_flag at offset 11
-        expect(bd.getUint8(11), equals(1));
+        check(bd.getUint8(11)).equals(1);
 
         // Param 1 type at offset 12: varStringType (0xFD)
-        expect(bd.getUint8(12), equals(MySQLColumnType.varStringType));
-        expect(bd.getUint8(13), equals(0)); // unsigned flag
+        check(bd.getUint8(12)).equals(MySQLColumnType.varStringType);
+        check(bd.getUint8(13)).equals(0); // unsigned flag
 
         // Param 2 type at offset 14: blobType (0xFC)
-        expect(bd.getUint8(14), equals(MySQLColumnType.blobType));
-        expect(bd.getUint8(15), equals(0)); // unsigned flag
+        check(bd.getUint8(14)).equals(MySQLColumnType.blobType);
+        check(bd.getUint8(15)).equals(0); // unsigned flag
       },
     );
 
@@ -77,12 +78,14 @@ void main() {
           colDefs: [blobColDef],
           values: textRowPkt.values,
         );
-        expect(row.colBytesAt(0), equals(rawPayload));
-        expect(() => row.colAt(0), throwsA(isA<MySQLClientException>()));
+        check(row.colBytesAt(0)).isNotNull().deepEquals(rawPayload);
+        check(() => row.colAt(0)).throws<MySQLClientException>();
 
         // Verify nullable generic type arguments
-        expect(row.typedColAt<Uint8List?>(0), equals(rawPayload));
-        expect(row.typedColByName<Uint8List?>('payload'), equals(rawPayload));
+        check(row.typedColAt<Uint8List?>(0)).isNotNull().deepEquals(rawPayload);
+        check(
+          row.typedColByName<Uint8List?>('payload'),
+        ).isNotNull().deepEquals(rawPayload);
       },
     );
 
@@ -112,9 +115,9 @@ void main() {
           colDefs: [varbinColDef],
           values: textRowPkt.values,
         );
-        expect(row.colBytesAt(0), equals(rawPayload));
-        expect(row.typedColAt<Uint8List?>(0), equals(rawPayload));
-        expect(() => row.colAt(0), throwsA(isA<MySQLClientException>()));
+        check(row.colBytesAt(0)).isNotNull().deepEquals(rawPayload);
+        check(row.typedColAt<Uint8List?>(0)).isNotNull().deepEquals(rawPayload);
+        check(() => row.colAt(0)).throws<MySQLClientException>();
       },
     );
 
@@ -150,8 +153,8 @@ void main() {
           values: binRowPkt.values,
         );
 
-        expect(row.colBytesAt(0), equals(rawPayload));
-        expect(row.typedColAt<Uint8List?>(0), equals(rawPayload));
+        check(row.colBytesAt(0)).isNotNull().deepEquals(rawPayload);
+        check(row.typedColAt<Uint8List?>(0)).isNotNull().deepEquals(rawPayload);
       },
     );
 
@@ -183,7 +186,7 @@ void main() {
         );
 
         final assoc = row.typedAssoc();
-        expect(assoc['varbin_data'], equals(rawPayload));
+        check(assoc['varbin_data'] as Uint8List).deepEquals(rawPayload);
       },
     );
 
@@ -203,8 +206,8 @@ void main() {
         );
         final row = ResultSetRow.decode(colDefs: [colDef], values: ['1']);
 
-        expect(() => row.colAt(-1), throwsA(isA<MySQLClientException>()));
-        expect(() => row.colBytesAt(-1), throwsA(isA<MySQLClientException>()));
+        check(() => row.colAt(-1)).throws<MySQLClientException>();
+        check(() => row.colBytesAt(-1)).throws<MySQLClientException>();
       },
     );
 
@@ -228,8 +231,8 @@ void main() {
         );
 
         final assoc = row.typedAssoc();
-        expect(assoc['notes'], isA<String>());
-        expect(assoc['notes'], equals('hello world'));
+        check(assoc['notes']).isA<String>();
+        check(assoc['notes']).equals('hello world');
       },
     );
 
@@ -252,13 +255,19 @@ void main() {
           values: [rawPayload],
         );
 
-        expect(row.typedColAt<dynamic>(0), equals(rawPayload));
-        expect(row.typedColAt<Object>(0), equals(rawPayload));
-        expect(row.typedColAt<Object?>(0), equals(rawPayload));
+        check(row.typedColAt<dynamic>(0) as Uint8List).deepEquals(rawPayload);
+        check(row.typedColAt<Object>(0) as Uint8List).deepEquals(rawPayload);
+        check(row.typedColAt<Object?>(0) as Uint8List).deepEquals(rawPayload);
 
-        expect(row.typedColByName<dynamic>('data'), equals(rawPayload));
-        expect(row.typedColByName<Object>('data'), equals(rawPayload));
-        expect(row.typedColByName<Object?>('data'), equals(rawPayload));
+        check(
+          row.typedColByName<dynamic>('data') as Uint8List,
+        ).deepEquals(rawPayload);
+        check(
+          row.typedColByName<Object>('data') as Uint8List,
+        ).deepEquals(rawPayload);
+        check(
+          row.typedColByName<Object?>('data') as Uint8List,
+        ).deepEquals(rawPayload);
       },
     );
   });

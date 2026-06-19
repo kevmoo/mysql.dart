@@ -1,7 +1,9 @@
+import 'package:test/test.dart' show fail;
 import 'dart:io';
 
 import 'package:mysql_client/mysql_client.dart';
-import 'package:test/test.dart';
+import 'package:checks/checks.dart';
+import 'package:test/scaffolding.dart';
 
 void testMysqlClient(
   dynamic host,
@@ -35,9 +37,9 @@ void testMysqlClient(
       secure: secure,
     );
 
-    expect(conn.connected, false);
+    check(conn.connected).equals(false);
     await conn.connect();
-    expect(conn.connected, true);
+    check(conn.connected).equals(true);
 
     await conn.execute('DROP DATABASE IF EXISTS $db');
     await conn.execute(
@@ -64,8 +66,8 @@ create table book
     conn.onClose(() => counter++);
 
     await conn.close();
-    expect(conn.connected, false);
-    expect(counter, 2);
+    check(conn.connected).equals(false);
+    check(counter).equals(2);
   });
 
   test('testing bad connection', () async {
@@ -82,7 +84,7 @@ create table book
 
       fail('Not thrown');
     } catch (e) {
-      expect(e, isA<MySQLServerException>());
+      check(e).isA<MySQLServerException>();
     }
   });
 
@@ -97,8 +99,8 @@ create table book
       },
     );
 
-    expect(result.affectedRows.toInt(), 1);
-    expect(result.lastInsertID.toInt(), 1);
+    check(result.affectedRows.toInt()).equals(1);
+    check(result.lastInsertID.toInt()).equals(1);
   });
 
   test('testing select', () async {
@@ -106,38 +108,38 @@ create table book
       'id': 1,
     });
 
-    expect(result.affectedRows.toInt(), 0);
-    expect(result.lastInsertID.toInt(), 0);
-    expect(result.numOfColumns, 6);
-    expect(result.numOfRows, 1);
+    check(result.affectedRows.toInt()).equals(0);
+    check(result.lastInsertID.toInt()).equals(0);
+    check(result.numOfColumns).equals(6);
+    check(result.numOfRows).equals(1);
 
     // get first row
     final row = await result.rowsStream.first;
 
-    expect(row.colAt(0), '1');
-    expect(row.colAt(1), null);
-    expect(row.colAt(2), 'Новая книга 😁');
-    expect(row.colAt(3), '100');
-    expect(row.colAt(4), '2020-01-01 01:00:15');
-    expect(row.colAt(5), null);
-    expect(row.typedColAt<int>(0), 1);
-    expect(row.typedColAt<int>(3), 100);
-    expect(row.typedColAt<double>(3), 100.00);
+    check(row.colAt(0)).equals('1');
+    check(row.colAt(1)).isNull();
+    check(row.colAt(2)).equals('Новая книга 😁');
+    check(row.colAt(3)).equals('100');
+    check(row.colAt(4)).equals('2020-01-01 01:00:15');
+    check(row.colAt(5)).isNull();
+    check(row.typedColAt<int>(0)).equals(1);
+    check(row.typedColAt<int>(3)).equals(100);
+    check(row.typedColAt<double>(3)).equals(100.00);
 
-    expect(row.colByName('id'), '1');
-    expect(row.colByName('author_id'), null);
-    expect(row.colByName('title'), 'Новая книга 😁');
-    expect(row.colByName('Title'), 'Новая книга 😁');
-    expect(row.colByName('PrIce'), '100');
-    expect(row.typedColByName<int>('price'), 100);
-    expect(row.typedColByName<double>('price'), 100.00);
-    expect(row.typedColByName<int>('Price'), 100);
-    expect(row.typedColByName<double>('pRice'), 100.00);
-    expect(row.colByName('created_at'), '2020-01-01 01:00:15');
-    expect(row.colByName('some_time'), null);
-    expect(row.colByName('Some_Time'), null);
+    check(row.colByName('id')).equals('1');
+    check(row.colByName('author_id')).isNull();
+    check(row.colByName('title')).equals('Новая книга 😁');
+    check(row.colByName('Title')).equals('Новая книга 😁');
+    check(row.colByName('PrIce')).equals('100');
+    check(row.typedColByName<int>('price')).equals(100);
+    check(row.typedColByName<double>('price')).equals(100.00);
+    check(row.typedColByName<int>('Price')).equals(100);
+    check(row.typedColByName<double>('pRice')).equals(100.00);
+    check(row.colByName('created_at')).equals('2020-01-01 01:00:15');
+    check(row.colByName('some_time')).isNull();
+    check(row.colByName('Some_Time')).isNull();
 
-    expect(row.assoc(), {
+    check(row.assoc()).deepEquals({
       'id': '1',
       'author_id': null,
       'title': 'Новая книга 😁',
@@ -146,7 +148,7 @@ create table book
       'some_time': null,
     });
 
-    expect(row.typedAssoc(), {
+    check(row.typedAssoc()).deepEquals({
       'id': 1,
       'author_id': null,
       'title': 'Новая книга 😁',
@@ -162,7 +164,7 @@ create table book
 
       fail('Exception is not thrown');
     } catch (e) {
-      expect(e, isA<MySQLServerException>());
+      check(e).isA<MySQLServerException>();
     }
   });
 
@@ -180,7 +182,7 @@ create table book
       );
       fail('Exception is not thrown');
     } catch (e) {
-      expect(e, isA<MySQLServerException>());
+      check(e).isA<MySQLServerException>();
     }
   });
 
@@ -189,7 +191,7 @@ create table book
       await conn.prepare('INSERT INTO book (author_id, title) VA_LUESD (?, ?)');
       fail('Exception is not thrown');
     } catch (e) {
-      expect(e, isA<MySQLServerException>());
+      check(e).isA<MySQLServerException>();
     }
   });
 
@@ -198,10 +200,10 @@ create table book
       'id': 1,
     });
 
-    expect(result.affectedRows.toInt(), 1);
-    expect(result.lastInsertID.toInt(), 0);
-    expect(result.numOfColumns, 0);
-    expect(result.numOfRows, 0);
+    check(result.affectedRows.toInt()).equals(1);
+    check(result.lastInsertID.toInt()).equals(0);
+    check(result.numOfColumns).equals(0);
+    check(result.numOfRows).equals(0);
   });
 
   test('testing transaction', () async {
@@ -217,9 +219,9 @@ create table book
         },
       );
 
-      expect(result.affectedRows.toInt(), 1);
+      check(result.affectedRows.toInt()).equals(1);
       transactionBookId = result.lastInsertID.toInt();
-      expect(transactionBookId, greaterThan(1));
+      check(transactionBookId!).isGreaterThan(1);
     });
   });
 
@@ -228,31 +230,31 @@ create table book
       'id': transactionBookId,
     });
 
-    expect(result.affectedRows.toInt(), 0);
-    expect(result.lastInsertID.toInt(), 0);
-    expect(result.numOfColumns, 6);
-    expect(result.numOfRows, 1);
+    check(result.affectedRows.toInt()).equals(0);
+    check(result.lastInsertID.toInt()).equals(0);
+    check(result.numOfColumns).equals(6);
+    check(result.numOfRows).equals(1);
 
     // get first row
     final row = await result.rowsStream.first;
 
-    expect(row.colAt(0), transactionBookId.toString());
-    expect(row.colAt(1), null);
-    expect(row.colAt(2), 'New book');
-    expect(row.colAt(3), '100');
-    expect(row.colAt(4), '2020-01-01 01:00:15');
-    expect(row.colAt(5), startsWith('01:15:25'));
-    expect(row.typedColAt<int>(0), transactionBookId);
-    expect(row.typedColAt<int>(3), 100);
-    expect(row.typedColAt<num>(3), 100);
-    expect(row.typedColAt<double>(3), 100.00);
+    check(row.colAt(0)).equals(transactionBookId.toString());
+    check(row.colAt(1)).isNull();
+    check(row.colAt(2)).equals('New book');
+    check(row.colAt(3)).equals('100');
+    check(row.colAt(4)).equals('2020-01-01 01:00:15');
+    check(row.colAt(5)!).startsWith('01:15:25');
+    check(row.typedColAt<int>(0)).equals(transactionBookId);
+    check(row.typedColAt<int>(3)).equals(100);
+    check(row.typedColAt<num>(3)).equals(100);
+    check(row.typedColAt<double>(3)).equals(100.00);
 
-    expect(row.colByName('id'), transactionBookId.toString());
-    expect(row.colByName('author_id'), null);
-    expect(row.colByName('title'), 'New book');
-    expect(row.colByName('price'), '100');
-    expect(row.colByName('created_at'), '2020-01-01 01:00:15');
-    expect(row.colByName('some_time'), startsWith('01:15:25'));
+    check(row.colByName('id')).equals(transactionBookId.toString());
+    check(row.colByName('author_id')).isNull();
+    check(row.colByName('title')).equals('New book');
+    check(row.colByName('price')).equals('100');
+    check(row.colByName('created_at')).equals('2020-01-01 01:00:15');
+    check(row.colByName('some_time')!).startsWith('01:15:25');
   });
 
   test('testing double transaction', () async {
@@ -280,8 +282,10 @@ create table book
       ]);
       fail('Exception is not thrown');
     } catch (e) {
-      expect(e, isA<MySQLClientException>());
-      expect(e.toString(), 'MySQLClientException: Already in transaction');
+      check(e).isA<MySQLClientException>();
+      check(
+        e.toString(),
+      ).equals('MySQLClientException: Already in transaction');
     }
   });
 
@@ -291,7 +295,7 @@ create table book
 
       fail('Exception is not thrown');
     } catch (e) {
-      expect(e, isA<MySQLClientException>());
+      check(e).isA<MySQLClientException>();
     }
   });
 
@@ -300,7 +304,7 @@ create table book
       'INSERT INTO book (title, price, created_at) VALUES (?, ?, ?)',
     );
 
-    expect(stmt.numOfParams, 3);
+    check(stmt.numOfParams).equals(3);
 
     var result = await stmt.execute([
       'Some title 1',
@@ -308,15 +312,15 @@ create table book
       '2022-04-02 00:00:00',
     ]);
 
-    expect(result.affectedRows.toInt(), 1);
+    check(result.affectedRows.toInt()).equals(1);
     final id1 = result.lastInsertID.toInt();
-    expect(id1, greaterThan(1));
+    check(id1).isGreaterThan(1);
 
     result = await stmt.execute(['Some title 2', 200, '2022-04-02 00:00:00']);
 
-    expect(result.affectedRows.toInt(), 1);
+    check(result.affectedRows.toInt()).equals(1);
     final id2 = result.lastInsertID.toInt();
-    expect(id2, greaterThan(id1));
+    check(id2).isGreaterThan(id1);
 
     await stmt.deallocate();
 
@@ -325,12 +329,12 @@ create table book
       result = await stmt.execute(['Some title 2', 200, '2022-04-02 00:00:00']);
       fail('Not thrown');
     } catch (e) {
-      expect(e, isA<MySQLServerException>());
+      check(e).isA<MySQLServerException>();
     }
 
     // check rows
     result = await conn.execute('SELECT COUNT(id) FROM book');
-    expect(result.rows.first.colAt(0), '3');
+    check(result.rows.first.colAt(0)).equals('3');
   });
 
   test('testing string encoding in prepared statements', () async {
@@ -341,7 +345,7 @@ create table book
     var result = await stmt.execute([null, '中文标题', 120, '2022-01-01']);
     await stmt.deallocate();
 
-    expect(result.affectedRows.toInt(), 1);
+    check(result.affectedRows.toInt()).equals(1);
   });
 
   test('testing prepared stmt select', () async {
@@ -349,26 +353,26 @@ create table book
 
     final result = await stmt.execute(['Some title 2']);
 
-    expect(result.numOfRows, 1);
-    expect(result.affectedRows.toInt(), 0);
+    check(result.numOfRows).equals(1);
+    check(result.affectedRows.toInt()).equals(0);
   });
 
   test('testing prepared stmt select JSON', () async {
     final stmt = await conn.prepare('SELECT CAST(? AS JSON) as col');
     final result = await stmt.execute(['{"key": "val"}']);
-    expect(result.rows.first.colByName('col'), '{"key": "val"}');
+    check(result.rows.first.colByName('col')).equals('{"key": "val"}');
     await stmt.deallocate();
   });
 
   test('testing empty result set', () async {
     final result = await conn.execute('SELECT * FROM book WHERE id = 99999');
-    expect(result.numOfRows, 0);
+    check(result.numOfRows).equals(0);
   });
 
   test('testing empty result for prepared statement', () async {
     final stmt = await conn.prepare('SELECT * FROM book WHERE id = 99999');
     final result = await stmt.execute([]);
-    expect(result.numOfRows, 0);
+    check(result.numOfRows).equals(0);
     await stmt.deallocate();
   });
 
@@ -377,14 +381,14 @@ create table book
       'SELECT 1 as val_1_1; SELECT 2 as val_2_1, 3 as val_2_2',
     );
 
-    expect(resultSets.next, isNotNull);
+    check(resultSets.next).isNotNull();
 
     final resultSetsList = resultSets.toList();
-    expect(resultSetsList.length, 2);
+    check(resultSetsList.length).equals(2);
 
-    expect(resultSetsList[0].rows.first.colByName('val_1_1'), '1');
-    expect(resultSetsList[1].rows.first.colByName('val_2_1'), '2');
-    expect(resultSetsList[1].rows.first.colByName('val_2_2'), '3');
+    check(resultSetsList[0].rows.first.colByName('val_1_1')).equals('1');
+    check(resultSetsList[1].rows.first.colByName('val_2_1')).equals('2');
+    check(resultSetsList[1].rows.first.colByName('val_2_2')).equals('3');
   });
 
   test('testing column types mapping', () async {
@@ -462,47 +466,47 @@ create table book
     for (var row in response.rows) {
       var typedAssoc = row.typedAssoc();
 
-      expect(typedAssoc['col_pk'].runtimeType, int);
-      expect(typedAssoc['col_bit'].runtimeType, String);
-      expect(typedAssoc['col_tinyint'].runtimeType, int);
-      expect(typedAssoc['col_bool'].runtimeType, isIn([bool, int]));
-      expect(typedAssoc['col_smallint'].runtimeType, int);
-      expect(typedAssoc['col_mediumint'].runtimeType, int);
-      expect(typedAssoc['col_int'].runtimeType, int);
-      expect(typedAssoc['col_integer'].runtimeType, int);
-      expect(typedAssoc['col_bigint'].runtimeType, int);
-      expect(typedAssoc['col_decimal'].runtimeType, String);
-      expect(typedAssoc['col_dec'].runtimeType, String);
-      expect(typedAssoc['col_numeric'].runtimeType, String);
-      expect(typedAssoc['col_fixed'].runtimeType, String);
-      expect(typedAssoc['col_float'].runtimeType, double);
-      expect(typedAssoc['col_double'].runtimeType, double);
+      check(typedAssoc['col_pk'].runtimeType).equals(int);
+      check(typedAssoc['col_bit'].runtimeType).equals(String);
+      check(typedAssoc['col_tinyint'].runtimeType).equals(int);
+      check([bool, int]).contains(typedAssoc['col_bool'].runtimeType);
+      check(typedAssoc['col_smallint'].runtimeType).equals(int);
+      check(typedAssoc['col_mediumint'].runtimeType).equals(int);
+      check(typedAssoc['col_int'].runtimeType).equals(int);
+      check(typedAssoc['col_integer'].runtimeType).equals(int);
+      check(typedAssoc['col_bigint'].runtimeType).equals(int);
+      check(typedAssoc['col_decimal'].runtimeType).equals(String);
+      check(typedAssoc['col_dec'].runtimeType).equals(String);
+      check(typedAssoc['col_numeric'].runtimeType).equals(String);
+      check(typedAssoc['col_fixed'].runtimeType).equals(String);
+      check(typedAssoc['col_float'].runtimeType).equals(double);
+      check(typedAssoc['col_double'].runtimeType).equals(double);
 
-      expect(typedAssoc['col_date'].runtimeType, DateTime);
-      expect(typedAssoc['col_time'].runtimeType, String);
-      expect(typedAssoc['col_datetime'].runtimeType, DateTime);
-      expect(typedAssoc['col_timestamp'].runtimeType, DateTime);
-      expect(typedAssoc['col_year'].runtimeType, int);
+      check(typedAssoc['col_date'].runtimeType).equals(DateTime);
+      check(typedAssoc['col_time'].runtimeType).equals(String);
+      check(typedAssoc['col_datetime'].runtimeType).equals(DateTime);
+      check(typedAssoc['col_timestamp'].runtimeType).equals(DateTime);
+      check(typedAssoc['col_year'].runtimeType).equals(int);
 
-      expect(typedAssoc['col_char'].runtimeType, String);
-      expect(typedAssoc['col_varchar'].runtimeType, String);
-      expect(typedAssoc['col_binary'].runtimeType, String);
-      expect(typedAssoc['col_varbinary'].runtimeType, String);
-      expect(typedAssoc['col_tinyblob'].runtimeType, String);
-      expect(typedAssoc['col_blob'].runtimeType, String);
-      expect(typedAssoc['col_mediumblob'].runtimeType, String);
-      expect(typedAssoc['col_longblob'].runtimeType, String);
-      expect(typedAssoc['col_tinytext'].runtimeType, String);
-      expect(typedAssoc['col_text'].runtimeType, String);
-      expect(typedAssoc['col_mediumtext'].runtimeType, String);
-      expect(typedAssoc['col_longtext'].runtimeType, String);
-      expect(typedAssoc['col_enum'].runtimeType, String);
-      expect(typedAssoc['col_set'].runtimeType, String);
-      expect(typedAssoc['col_json'].runtimeType, String);
-      expect(
-        row.colByName('col_json'),
-        isIn(['{"key": "val"}', '{"key":"val"}']),
-      );
+      check(typedAssoc['col_char'].runtimeType).equals(String);
+      check(typedAssoc['col_varchar'].runtimeType).equals(String);
+      check(typedAssoc['col_binary'].runtimeType).equals(String);
+      check(typedAssoc['col_varbinary'].runtimeType).equals(String);
+      check(typedAssoc['col_tinyblob'].runtimeType).equals(String);
+      check(typedAssoc['col_blob'].runtimeType).equals(String);
+      check(typedAssoc['col_mediumblob'].runtimeType).equals(String);
+      check(typedAssoc['col_longblob'].runtimeType).equals(String);
+      check(typedAssoc['col_tinytext'].runtimeType).equals(String);
+      check(typedAssoc['col_text'].runtimeType).equals(String);
+      check(typedAssoc['col_mediumtext'].runtimeType).equals(String);
+      check(typedAssoc['col_longtext'].runtimeType).equals(String);
+      check(typedAssoc['col_enum'].runtimeType).equals(String);
+      check(typedAssoc['col_set'].runtimeType).equals(String);
+      check(typedAssoc['col_json'].runtimeType).equals(String);
+      check([
+        '{"key": "val"}',
+        '{"key":"val"}',
+      ]).contains(row.colByName('col_json')!);
     }
 
     var groupedResponse = await conn.execute('''
@@ -515,10 +519,10 @@ create table book
       ''');
     for (var row in groupedResponse.rows) {
       var typedAssoc = row.typedAssoc();
-      expect(typedAssoc['col_pk'].runtimeType, int);
-      expect(typedAssoc['sum_int'].runtimeType, isIn([String, double]));
-      expect(typedAssoc['max_int'].runtimeType, int);
-      expect(typedAssoc['sum_double'].runtimeType, double);
+      check(typedAssoc['col_pk'].runtimeType).equals(int);
+      check([String, double]).contains(typedAssoc['sum_int'].runtimeType);
+      check(typedAssoc['max_int'].runtimeType).equals(int);
+      check(typedAssoc['sum_double'].runtimeType).equals(double);
     }
   });
 
@@ -547,6 +551,6 @@ create table book
       receivedRows++;
     }
 
-    expect(receivedRows, stressTestRows);
+    check(receivedRows).equals(stressTestRows);
   }, timeout: const Timeout(Duration(seconds: 60)));
 }
