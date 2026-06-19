@@ -221,7 +221,7 @@ create table book
 
       check(result.affectedRows.toInt()).equals(1);
       transactionBookId = result.lastInsertID.toInt();
-      check(transactionBookId!).isGreaterThan(1);
+      check(transactionBookId).isNotNull().isGreaterThan(1);
     });
   });
 
@@ -243,7 +243,7 @@ create table book
     check(row.colAt(2)).equals('New book');
     check(row.colAt(3)).equals('100');
     check(row.colAt(4)).equals('2020-01-01 01:00:15');
-    check(row.colAt(5)!).startsWith('01:15:25');
+    check(row.colAt(5)).isNotNull().startsWith('01:15:25');
     check(row.typedColAt<int>(0)).equals(transactionBookId);
     check(row.typedColAt<int>(3)).equals(100);
     check(row.typedColAt<num>(3)).equals(100);
@@ -254,7 +254,7 @@ create table book
     check(row.colByName('title')).equals('New book');
     check(row.colByName('price')).equals('100');
     check(row.colByName('created_at')).equals('2020-01-01 01:00:15');
-    check(row.colByName('some_time')!).startsWith('01:15:25');
+    check(row.colByName('some_time')).isNotNull().startsWith('01:15:25');
   });
 
   test('testing double transaction', () async {
@@ -503,10 +503,9 @@ create table book
       check(typedAssoc['col_enum'].runtimeType).equals(String);
       check(typedAssoc['col_set'].runtimeType).equals(String);
       check(typedAssoc['col_json'].runtimeType).equals(String);
-      check([
-        '{"key": "val"}',
-        '{"key":"val"}',
-      ]).contains(row.colByName('col_json')!);
+      final colJson = row.colByName('col_json');
+      check(colJson).isNotNull();
+      check(['{"key": "val"}', '{"key":"val"}']).contains(colJson as String);
     }
 
     var groupedResponse = await conn.execute('''
