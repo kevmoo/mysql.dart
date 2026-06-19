@@ -104,49 +104,35 @@ extension type const MySQLColumnType(int _) implements int {
     };
   }
 
-  Type getBestMatchDartType(int columnLength) {
-    switch (this) {
-      case MySQLColumnType.stringType:
-      case MySQLColumnType.varStringType:
-      case MySQLColumnType.vatChartType:
-      case MySQLColumnType.enumType:
-      case MySQLColumnType.setType:
-      case MySQLColumnType.geometryType:
-      case MySQLColumnType.bitType:
-      case MySQLColumnType.decimalType:
-      case MySQLColumnType.newDecimalType:
-      case MySQLColumnType.jsonType:
-        return String;
-      case MySQLColumnType.longBlobType:
-      case MySQLColumnType.mediumBlobType:
-      case MySQLColumnType.blobType:
-      case MySQLColumnType.tinyBlobType:
-        return Uint8List;
-      case MySQLColumnType.tinyType:
-        if (columnLength == 1) {
-          return bool;
-        } else {
-          return int;
-        }
-      case MySQLColumnType.shortType:
-      case MySQLColumnType.longType:
-      case MySQLColumnType.longLongType:
-      case MySQLColumnType.int24Type:
-      case MySQLColumnType.yearType:
-        return int;
-      case MySQLColumnType.floatType:
-      case MySQLColumnType.doubleType:
-        return double;
-      case MySQLColumnType.dateType:
-      case MySQLColumnType.dateTime2Type:
-      case MySQLColumnType.dateTimeType:
-      case MySQLColumnType.timestampType:
-      case MySQLColumnType.timestamp2Type:
-        return DateTime;
-      default:
-        return String;
-    }
-  }
+  Type getBestMatchDartType(int columnLength) => switch (this) {
+    MySQLColumnType.stringType ||
+    MySQLColumnType.varStringType ||
+    MySQLColumnType.vatChartType ||
+    MySQLColumnType.enumType ||
+    MySQLColumnType.setType ||
+    MySQLColumnType.geometryType ||
+    MySQLColumnType.bitType ||
+    MySQLColumnType.decimalType ||
+    MySQLColumnType.newDecimalType ||
+    MySQLColumnType.jsonType => String,
+    MySQLColumnType.longBlobType ||
+    MySQLColumnType.mediumBlobType ||
+    MySQLColumnType.blobType ||
+    MySQLColumnType.tinyBlobType => Uint8List,
+    MySQLColumnType.tinyType => columnLength == 1 ? bool : int,
+    MySQLColumnType.shortType ||
+    MySQLColumnType.longType ||
+    MySQLColumnType.longLongType ||
+    MySQLColumnType.int24Type ||
+    MySQLColumnType.yearType => int,
+    MySQLColumnType.floatType || MySQLColumnType.doubleType => double,
+    MySQLColumnType.dateType ||
+    MySQLColumnType.dateTime2Type ||
+    MySQLColumnType.dateTimeType ||
+    MySQLColumnType.timestampType ||
+    MySQLColumnType.timestamp2Type => DateTime,
+    _ => String,
+  };
 
   bool isBinary(int charset) {
     return charset == 63 &&
