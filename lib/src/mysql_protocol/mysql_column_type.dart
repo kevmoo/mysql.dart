@@ -147,6 +147,20 @@ extension type const MySQLColumnType(int _) implements int {
         return String;
     }
   }
+
+  bool isBinary(int charset) {
+    return charset == 63 &&
+        (this == MySQLColumnType.tinyBlobType ||
+            this == MySQLColumnType.mediumBlobType ||
+            this == MySQLColumnType.longBlobType ||
+            this == MySQLColumnType.blocType ||
+            this == MySQLColumnType.blobType ||
+            this == MySQLColumnType.varStringType ||
+            this == MySQLColumnType.stringType ||
+            this == MySQLColumnType.vatChartType ||
+            this == MySQLColumnType.geometryType ||
+            this == MySQLColumnType.bitType);
+  }
 }
 
 (Object, int) parseBinaryColumnData(
@@ -301,19 +315,7 @@ extension type const MySQLColumnType(int _) implements int {
     case MySQLColumnType.newDecimalType:
     case MySQLColumnType.jsonType:
       final type = MySQLColumnType(columnType);
-      final isBinary =
-          charset == 63 &&
-          (type == MySQLColumnType.tinyBlobType ||
-              type == MySQLColumnType.mediumBlobType ||
-              type == MySQLColumnType.longBlobType ||
-              type == MySQLColumnType.blocType ||
-              type == MySQLColumnType.blobType ||
-              type == MySQLColumnType.varStringType ||
-              type == MySQLColumnType.stringType ||
-              type == MySQLColumnType.vatChartType ||
-              type == MySQLColumnType.geometryType ||
-              type == MySQLColumnType.bitType);
-      if (isBinary) {
+      if (type.isBinary(charset)) {
         return buffer.getLengthEncodedBytes(startOffset);
       }
       return buffer.getUtf8LengthEncodedString(startOffset);

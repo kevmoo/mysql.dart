@@ -154,5 +154,58 @@ void main() {
         expect(row.typedColAt<Uint8List?>(0), equals(rawPayload));
       },
     );
+
+    test(
+      'typedAssoc preserves binary collation VARCHAR as Uint8List without throwing TypeError',
+      () {
+        final varbinColDef = MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'db',
+          table: 'tbl',
+          orgTable: 'tbl',
+          name: 'varbin_data',
+          orgName: 'varbin_data',
+          charset: 63, // binary collation
+          columnLength: 100,
+          type: MySQLColumnType.vatChartType,
+        );
+
+        final writer = ByteDataWriter();
+        writer.writeVariableEncInt(rawPayload.length);
+        writer.write(rawPayload);
+        final textRowPkt = MySQLResultSetRowPacket.decode(writer.toBytes(), 1, [
+          varbinColDef,
+        ]);
+
+        final row = ResultSetRow.decode(
+          colDefs: [varbinColDef],
+          values: textRowPkt.values,
+        );
+
+        final assoc = row.typedAssoc();
+        expect(assoc['varbin_data'], equals(rawPayload));
+      },
+    );
+
+    test(
+      'accessing negative column indices throws MySQLClientException instead of RangeError',
+      () {
+        final colDef = MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'db',
+          table: 'tbl',
+          orgTable: 'tbl',
+          name: 'id',
+          orgName: 'id',
+          charset: 33,
+          columnLength: 11,
+          type: MySQLColumnType.longType,
+        );
+        final row = ResultSetRow.decode(colDefs: [colDef], values: ['1']);
+
+        expect(() => row.colAt(-1), throwsA(isA<MySQLClientException>()));
+        expect(() => row.colBytesAt(-1), throwsA(isA<MySQLClientException>()));
+      },
+    );
   });
 }

@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import '../mysql_column_type.dart';
 import '../mysql_packet.dart';
 import '../mysql_protocol_extension.dart';
 import 'packet_column_definition.dart';
@@ -28,21 +27,7 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
         offset += 1;
       } else {
         final colDef = colDefs[x];
-        final type = colDef.type;
-        final isBinary =
-            colDef.charset == 63 &&
-            (type == MySQLColumnType.tinyBlobType ||
-                type == MySQLColumnType.mediumBlobType ||
-                type == MySQLColumnType.longBlobType ||
-                type == MySQLColumnType.blocType ||
-                type == MySQLColumnType.blobType ||
-                type == MySQLColumnType.varStringType ||
-                type == MySQLColumnType.stringType ||
-                type == MySQLColumnType.vatChartType ||
-                type == MySQLColumnType.geometryType ||
-                type == MySQLColumnType.bitType);
-
-        if (isBinary) {
+        if (colDef.type.isBinary(colDef.charset)) {
           final (bytes, len) = buffer.getLengthEncodedBytes(offset);
           values.add(bytes);
           offset += len;

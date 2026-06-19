@@ -1486,7 +1486,7 @@ class ResultSetRow {
 
   /// Returns the raw uncorrupted byte buffer for the column at [colIndex]
   Uint8List? colBytesAt(int colIndex) {
-    if (colIndex >= _values.length) {
+    if (colIndex < 0 || colIndex >= _values.length) {
       throw const MySQLClientException('Column index is out of range');
     }
     final value = _values[colIndex];
@@ -1498,7 +1498,7 @@ class ResultSetRow {
 
   /// Get column data by column index (starting form 0)
   String? colAt(int colIndex) {
-    if (colIndex >= _values.length) {
+    if (colIndex < 0 || colIndex >= _values.length) {
       throw const MySQLClientException('Column index is out of range');
     }
 
@@ -1641,7 +1641,9 @@ class ResultSetRow {
         continue;
       }
 
-      final dartType = colDef.type.getBestMatchDartType(colDef.columnLength);
+      final dartType = colDef.type.isBinary(colDef.charset)
+          ? Uint8List
+          : colDef.type.getBestMatchDartType(colDef.columnLength);
 
       dynamic decodedValue;
 
