@@ -1,5 +1,5 @@
-import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:checks/checks.dart';
+import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {
@@ -283,11 +283,9 @@ void main() {
     check(sqlType.convertStringValueToProvidedType<int>('2022')).equals(2022);
 
     check(
-      () => sqlType.convertStringValueToProvidedType<double>('2022'),
-    ).throws<Exception>();
-    check(
-      () => sqlType.convertStringValueToProvidedType<num>('2022'),
-    ).throws<Exception>();
+      sqlType.convertStringValueToProvidedType<double>('2022'),
+    ).equals(2022.0);
+    check(sqlType.convertStringValueToProvidedType<num>('2022')).equals(2022);
     check(
       () => sqlType.convertStringValueToProvidedType<bool>('2022'),
     ).throws<Exception>();

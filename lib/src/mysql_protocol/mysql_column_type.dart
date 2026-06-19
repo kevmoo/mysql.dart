@@ -44,59 +44,36 @@ extension type const MySQLColumnType(int _) implements int {
 
     return switch (T) {
       const (String) || const (dynamic) => value as T,
-      const (bool) => (() {
-        if (this == MySQLColumnType.tinyType && columnLength == 1) {
-          return int.parse(value) > 0 as T;
-        }
-        throw MySQLProtocolException(
-          'Can not convert MySQL type $this to requested type bool',
-        );
-      })(),
-      const (int) => switch (this) {
-        MySQLColumnType.tinyType ||
-        MySQLColumnType.shortType ||
-        MySQLColumnType.longType ||
-        MySQLColumnType.longLongType ||
-        MySQLColumnType.int24Type ||
-        MySQLColumnType.yearType => int.parse(value) as T,
-        _ => throw MySQLProtocolException(
-          'Can not convert MySQL type $this to requested type int',
-        ),
-      },
-      const (double) => switch (this) {
-        MySQLColumnType.tinyType ||
-        MySQLColumnType.shortType ||
-        MySQLColumnType.longType ||
-        MySQLColumnType.longLongType ||
-        MySQLColumnType.int24Type ||
-        MySQLColumnType.floatType ||
-        MySQLColumnType.doubleType => double.parse(value) as T,
-        _ => throw MySQLProtocolException(
-          'Can not convert MySQL type $this to requested type double',
-        ),
-      },
-      const (num) => switch (this) {
-        MySQLColumnType.tinyType ||
-        MySQLColumnType.shortType ||
-        MySQLColumnType.longType ||
-        MySQLColumnType.longLongType ||
-        MySQLColumnType.int24Type ||
-        MySQLColumnType.floatType ||
-        MySQLColumnType.doubleType => num.parse(value) as T,
-        _ => throw MySQLProtocolException(
-          'Can not convert MySQL type $this to requested type num',
-        ),
-      },
-      const (DateTime) => switch (this) {
-        MySQLColumnType.dateType ||
-        MySQLColumnType.dateTime2Type ||
-        MySQLColumnType.dateTimeType ||
-        MySQLColumnType.timestampType ||
-        MySQLColumnType.timestamp2Type => DateTime.parse(value) as T,
-        _ => throw MySQLProtocolException(
-          'Can not convert MySQL type $this to requested type DateTime',
-        ),
-      },
+      const (bool) =>
+        (this == MySQLColumnType.tinyType && columnLength == 1)
+            ? int.parse(value) > 0 as T
+            : throw MySQLProtocolException(
+                'Can not convert MySQL type $this to requested type bool',
+              ),
+      const (int) =>
+        isInteger
+            ? int.parse(value) as T
+            : throw MySQLProtocolException(
+                'Can not convert MySQL type $this to requested type int',
+              ),
+      const (double) =>
+        isNumeric
+            ? double.parse(value) as T
+            : throw MySQLProtocolException(
+                'Can not convert MySQL type $this to requested type double',
+              ),
+      const (num) =>
+        isNumeric
+            ? num.parse(value) as T
+            : throw MySQLProtocolException(
+                'Can not convert MySQL type $this to requested type num',
+              ),
+      const (DateTime) =>
+        isDateTime
+            ? DateTime.parse(value) as T
+            : throw MySQLProtocolException(
+                'Can not convert MySQL type $this to requested type DateTime',
+              ),
       _ => throw MySQLProtocolException(
         'Can not convert MySQL type $this to requested type ${T.runtimeType}',
       ),
@@ -104,47 +81,60 @@ extension type const MySQLColumnType(int _) implements int {
   }
 
   Type getBestMatchDartType(int columnLength) => switch (this) {
-    MySQLColumnType.stringType ||
-    MySQLColumnType.varStringType ||
-    MySQLColumnType.varCharType ||
-    MySQLColumnType.enumType ||
-    MySQLColumnType.setType ||
-    MySQLColumnType.geometryType ||
-    MySQLColumnType.bitType ||
-    MySQLColumnType.decimalType ||
-    MySQLColumnType.newDecimalType ||
-    MySQLColumnType.jsonType => String,
-    MySQLColumnType.longBlobType ||
-    MySQLColumnType.mediumBlobType ||
-    MySQLColumnType.blobType ||
-    MySQLColumnType.tinyBlobType => Uint8List,
+    _ when isBlob => Uint8List,
     MySQLColumnType.tinyType => columnLength == 1 ? bool : int,
-    MySQLColumnType.shortType ||
-    MySQLColumnType.longType ||
-    MySQLColumnType.longLongType ||
-    MySQLColumnType.int24Type ||
-    MySQLColumnType.yearType => int,
-    MySQLColumnType.floatType || MySQLColumnType.doubleType => double,
-    MySQLColumnType.dateType ||
-    MySQLColumnType.dateTime2Type ||
-    MySQLColumnType.dateTimeType ||
-    MySQLColumnType.timestampType ||
-    MySQLColumnType.timestamp2Type => DateTime,
+    _ when isInteger => int,
+    _ when isFloatingPoint => double,
+    _ when isDateTime => DateTime,
     _ => String,
   };
 
   bool isBinary(int charset) {
     return charset == 63 &&
-        (this == MySQLColumnType.tinyBlobType ||
-            this == MySQLColumnType.mediumBlobType ||
-            this == MySQLColumnType.longBlobType ||
-            this == MySQLColumnType.blobType ||
-            this == MySQLColumnType.varStringType ||
-            this == MySQLColumnType.stringType ||
-            this == MySQLColumnType.varCharType ||
+        (isBlob ||
+            isString ||
             this == MySQLColumnType.geometryType ||
             this == MySQLColumnType.bitType);
   }
+
+  bool get isInteger => switch (this) {
+    MySQLColumnType.tinyType ||
+    MySQLColumnType.shortType ||
+    MySQLColumnType.longType ||
+    MySQLColumnType.longLongType ||
+    MySQLColumnType.int24Type ||
+    MySQLColumnType.yearType => true,
+    _ => false,
+  };
+
+  bool get isNumeric => isInteger || isFloatingPoint;
+
+  bool get isFloatingPoint =>
+      this == MySQLColumnType.floatType || this == MySQLColumnType.doubleType;
+
+  bool get isDateTime => switch (this) {
+    MySQLColumnType.dateType ||
+    MySQLColumnType.dateTime2Type ||
+    MySQLColumnType.dateTimeType ||
+    MySQLColumnType.timestampType ||
+    MySQLColumnType.timestamp2Type => true,
+    _ => false,
+  };
+
+  bool get isBlob => switch (this) {
+    MySQLColumnType.tinyBlobType ||
+    MySQLColumnType.mediumBlobType ||
+    MySQLColumnType.longBlobType ||
+    MySQLColumnType.blobType => true,
+    _ => false,
+  };
+
+  bool get isString => switch (this) {
+    MySQLColumnType.stringType ||
+    MySQLColumnType.varStringType ||
+    MySQLColumnType.varCharType => true,
+    _ => false,
+  };
 }
 
 (Object, int) parseBinaryColumnData(
