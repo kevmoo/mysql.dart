@@ -771,4 +771,34 @@ void main() {
       },
     );
   });
+
+  group('testing COM_STMT_EXECUTE packet encoding', () {
+    test(
+      'encoding UTC DateTime parameter in COM_STMT_EXECUTE strips trailing Z',
+      () {
+        final dt = DateTime.utc(2026, 6, 10, 14, 30, 0);
+        final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dt]);
+        final encoded = pkt.encode();
+        final bd = ByteData.sublistView(encoded);
+
+        check(bd.getUint8(0)).equals(0x17); // COM_STMT_EXECUTE
+        check(bd.getUint32(1, Endian.little)).equals(1); // stmtID
+        check(bd.getUint8(12)).equals(MySQLColumnType.varStringType);
+
+        final (str, _) = encoded.getUtf8LengthEncodedString(14);
+        check(str).equals('2026-06-10 14:30:00.000');
+      },
+    );
+
+    test(
+      'encoding local DateTime parameter in COM_STMT_EXECUTE preserves format without Z',
+      () {
+        final dt = DateTime(2026, 6, 10, 14, 30, 0);
+        final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dt]);
+        final encoded = pkt.encode();
+        final (str, _) = encoded.getUtf8LengthEncodedString(14);
+        check(str).equals('2026-06-10 14:30:00.000');
+      },
+    );
+  });
 }

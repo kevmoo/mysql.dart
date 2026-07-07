@@ -693,6 +693,12 @@ class MySQLConnection {
         value = val.toString();
       } else if (val is bool) {
         value = val ? 'TRUE' : 'FALSE';
+      } else if (val is DateTime) {
+        var str = val.toString();
+        if (val.isUtc && str.endsWith('Z')) {
+          str = str.substring(0, str.length - 1);
+        }
+        value = "'${_escapeString(str)}'";
       } else {
         value = "'${_escapeString(val.toString())}'";
       }

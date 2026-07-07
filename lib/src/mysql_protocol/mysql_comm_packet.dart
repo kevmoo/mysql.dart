@@ -128,6 +128,14 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
             );
             buffer.writeVariableEncInt(bytes.length);
             buffer.write(bytes);
+          } else if (param is DateTime) {
+            var value = param.toString();
+            if (param.isUtc && value.endsWith('Z')) {
+              value = value.substring(0, value.length - 1);
+            }
+            final encodedData = utf8.encode(value);
+            buffer.writeVariableEncInt(encodedData.length);
+            buffer.write(encodedData);
           } else {
             final value = param.toString();
             final encodedData = utf8.encode(value);
