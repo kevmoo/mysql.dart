@@ -1,0 +1,50 @@
+name: validate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.sdk }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: ['3.12.0', dev]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.sdk }}
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Check formatting
+        if: matrix.sdk == 'dev'
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze code
+        if: matrix.sdk == '3.12.0'
+        run: dart analyze
+
+      - name: Analyze code (dev)
+        if: matrix.sdk == 'dev'
+        run: dart analyze --fatal-infos
+
+      - name: Run unit tests
+        run: dart test
+
+      - name: Run MySQL integration tests
+        run: dart tool/run_integration_tests.dart
+
+      - name: Run Dolt integration tests
+        run: dart tool/run_dolt_tests.dart

@@ -98,7 +98,27 @@ class DbContainer {
     ];
 
     stdout.writeln('Starting container $containerName with image $image...');
-    final runResult = await Process.run('podman', runArgs);
+    var runResult = await Process.run('podman', runArgs);
+    for (
+      var attempt = 1;
+      attempt <= 10 &&
+          runResult.exitCode != 0 &&
+          (runResult.stderr.toString().contains('address already in use') ||
+              runResult.stdout.toString().contains('address already in use') ||
+              runResult.stderr.toString().contains('bind:') ||
+              runResult.stdout.toString().contains('bind:'));
+      attempt++
+    ) {
+      stdout.writeln(
+        'Port 3306 still in use (rootlessport cleanup in progress). Waiting 3 seconds and retrying attempt $attempt...',
+      );
+      await Future<void>.delayed(const Duration(seconds: 3));
+      await _cleanup();
+      if (mountSocket) {
+        await Directory('.tmp_mysql').create(recursive: true);
+      }
+      runResult = await Process.run('podman', runArgs);
+    }
     if (runResult.exitCode != 0) {
       throw ProcessException(
         'podman',
@@ -172,6 +192,10 @@ class DbContainer {
   Future<void> _cleanup() async {
     stdout.writeln('Stopping and removing container $containerName...');
     await Process.run('podman', ['rm', '-f', containerName]);
+    if (Platform.isLinux) {
+      await Process.run('sh', ['-c', 'fuser -k 3306/tcp || true']);
+    }
+    await Future<void>.delayed(const Duration(seconds: 2));
     if (mountSocket) {
       await Process.run('podman', ['unshare', 'rm', '-rf', '.tmp_mysql']);
       final link = Link('/tmp/mysql.sock');
@@ -214,5 +238,20 @@ Future<void> runProcessStreamed(
   final exitCode = await process.exitCode;
   if (exitCode != 0) {
     throw ProcessException(executable, arguments, 'Command failed', exitCode);
+  }
+}
+
+Future<bool> isUnixSocketConnectable(String path) async {
+  if (!Platform.isLinux && !Platform.isMacOS) return false;
+  try {
+    final socket = await Socket.connect(
+      InternetAddress(path, type: InternetAddressType.unix),
+      0,
+      timeout: const Duration(seconds: 2),
+    );
+    socket.destroy();
+    return true;
+  } catch (_) {
+    return false;
   }
 }
