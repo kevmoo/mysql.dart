@@ -101,16 +101,22 @@ class DbContainer {
     var runResult = await Process.run('podman', runArgs);
     for (
       var attempt = 1;
-      attempt <= 5 &&
+      attempt <= 10 &&
           runResult.exitCode != 0 &&
-          runResult.stderr.toString().contains('address already in use');
+          (runResult.stderr.toString().contains('address already in use') ||
+              runResult.stdout.toString().contains('address already in use') ||
+              runResult.stderr.toString().contains('bind:') ||
+              runResult.stdout.toString().contains('bind:'));
       attempt++
     ) {
       stdout.writeln(
-        'Port 3306 still in use (rootlessport cleanup in progress). Waiting 2 seconds and retrying attempt $attempt...',
+        'Port 3306 still in use (rootlessport cleanup in progress). Waiting 3 seconds and retrying attempt $attempt...',
       );
-      await Future<void>.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(seconds: 3));
       await _cleanup();
+      if (mountSocket) {
+        await Directory('.tmp_mysql').create(recursive: true);
+      }
       runResult = await Process.run('podman', runArgs);
     }
     if (runResult.exitCode != 0) {
@@ -186,7 +192,7 @@ class DbContainer {
   Future<void> _cleanup() async {
     stdout.writeln('Stopping and removing container $containerName...');
     await Process.run('podman', ['rm', '-f', containerName]);
-    await Future<void>.delayed(const Duration(seconds: 1));
+    await Future<void>.delayed(const Duration(seconds: 2));
     if (mountSocket) {
       await Process.run('podman', ['unshare', 'rm', '-rf', '.tmp_mysql']);
       final link = Link('/tmp/mysql.sock');
