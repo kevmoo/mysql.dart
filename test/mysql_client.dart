@@ -113,6 +113,9 @@ create table book
 
     check(result.affectedRows.toInt()).equals(1);
     final id = result.lastInsertID.toInt();
+    addTearDown(
+      () => conn.execute('DELETE FROM book WHERE id = :id', {'id': id}),
+    );
 
     result = await conn.execute('SELECT created_at FROM book WHERE id = :id', {
       'id': id,
@@ -122,8 +125,6 @@ create table book
     check(
       row.typedColByName<DateTime>('created_at'),
     ).equals(DateTime.parse('2026-06-10 14:30:00'));
-
-    await conn.execute('DELETE FROM book WHERE id = :id', {'id': id});
   });
 
   test('testing select', () async {
@@ -514,8 +515,8 @@ create table book
 
       check(typedAssoc['col_pk'].runtimeType).equals(int);
       check(
-        typedAssoc['col_bit'] is Uint8List || typedAssoc['col_bit'] is String,
-      ).isTrue();
+        typedAssoc['col_bit'],
+      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
       check(typedAssoc['col_tinyint'].runtimeType).equals(int);
       check([bool, int]).contains(typedAssoc['col_bool'].runtimeType);
       check(typedAssoc['col_smallint'].runtimeType).equals(int);
