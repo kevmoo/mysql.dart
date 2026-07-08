@@ -103,6 +103,26 @@ create table book
     check(result.lastInsertID.toInt()).equals(1);
   });
 
+  test('testing insert with DateTime parameter', () async {
+    final utcDate = DateTime.utc(2026, 6, 10, 14, 30, 0);
+    var result = await conn.execute(
+      'INSERT INTO book (author_id, title, price, created_at) VALUES (:author, :title, :price, :created)',
+      {'author': null, 'title': 'UTC Book', 'price': 150, 'created': utcDate},
+    );
+
+    check(result.affectedRows.toInt()).equals(1);
+    final id = result.lastInsertID.toInt();
+
+    result = await conn.execute('SELECT created_at FROM book WHERE id = :id', {
+      'id': id,
+    });
+    final row = await result.rowsStream.first;
+    check(row.colByName('created_at')).equals('2026-06-10 14:30:00');
+    check(
+      row.typedColByName<DateTime>('created_at'),
+    ).equals(DateTime.parse('2026-06-10 14:30:00'));
+  });
+
   test('testing select', () async {
     final result = await conn.execute('SELECT * FROM book WHERE id = :id', {
       'id': 1,
@@ -346,6 +366,29 @@ create table book
     await stmt.deallocate();
 
     check(result.affectedRows.toInt()).equals(1);
+  });
+
+  test('testing DateTime encoding in prepared statements', () async {
+    var stmt = await conn.prepare(
+      'INSERT INTO book (author_id, title, price, created_at) VALUES (?, ?, ?, ?)',
+    );
+
+    final utcDate = DateTime.utc(2026, 6, 10, 15, 45, 0);
+    var result = await stmt.execute([null, 'DateTime Title', 150, utcDate]);
+    await stmt.deallocate();
+
+    check(result.affectedRows.toInt()).equals(1);
+    final id = result.lastInsertID.toInt();
+
+    final selectResult = await conn.execute(
+      'SELECT created_at FROM book WHERE id = :id',
+      {'id': id},
+    );
+    final row = await selectResult.rowsStream.first;
+    check(row.colByName('created_at')).equals('2026-06-10 15:45:00');
+    check(
+      row.typedColByName<DateTime>('created_at'),
+    ).equals(DateTime.parse('2026-06-10 15:45:00'));
   });
 
   test('testing prepared stmt select', () async {
