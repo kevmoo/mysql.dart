@@ -216,3 +216,18 @@ Future<void> runProcessStreamed(
     throw ProcessException(executable, arguments, 'Command failed', exitCode);
   }
 }
+
+Future<bool> isUnixSocketConnectable(String path) async {
+  if (!Platform.isLinux && !Platform.isMacOS) return false;
+  try {
+    final socket = await Socket.connect(
+      InternetAddress(path, type: InternetAddressType.unix),
+      0,
+      timeout: const Duration(seconds: 2),
+    );
+    socket.destroy();
+    return true;
+  } catch (_) {
+    return false;
+  }
+}

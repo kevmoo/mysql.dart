@@ -1,10 +1,18 @@
 import 'dart:io';
 import 'mysql_client.dart';
 
-void main() {
-  if (!Platform.isLinux) {
+void main() async {
+  if (!Platform.isLinux && !Platform.isMacOS) return;
+  try {
+    final socket = await Socket.connect(
+      InternetAddress('/tmp/mysql.sock', type: InternetAddressType.unix),
+      0,
+      timeout: const Duration(seconds: 2),
+    );
+    socket.destroy();
+  } catch (_) {
     print(
-      'Skipping Unix socket tests (only supported on Linux container host)',
+      'Skipping Unix socket tests (socket /tmp/mysql.sock not connectable from host)',
     );
     return;
   }

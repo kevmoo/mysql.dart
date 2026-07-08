@@ -1,6 +1,5 @@
 #!/usr/bin/env dart
 
-import 'dart:io';
 import 'shared.dart';
 
 void main() async {
@@ -12,14 +11,14 @@ void main() async {
       'test/mysql_client_tcp.dart',
     ], input: 'y\n');
 
-    if (Platform.isLinux) {
+    if (await isUnixSocketConnectable('/tmp/mysql.sock')) {
       print('Running Unix Socket integration tests...');
       await runProcessStreamed('dart', [
         'test/mysql_client_socket.dart',
       ], input: 'y\n');
     } else {
       print(
-        'Skipping Unix Socket integration tests (only supported on Linux container host)...',
+        'Skipping Unix Socket integration tests (socket /tmp/mysql.sock not connectable from host)...',
       );
     }
 

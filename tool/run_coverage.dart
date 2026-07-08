@@ -74,7 +74,7 @@ void main() async {
       8181,
       '$_coverageDir/mysql_client_tcp.vm.json',
     );
-    if (Platform.isLinux) {
+    if (await isUnixSocketConnectable('/tmp/mysql.sock')) {
       await runManualCoverage(
         'test/mysql_client_socket.dart',
         8182,
