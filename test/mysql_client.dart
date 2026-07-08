@@ -6,6 +6,11 @@ import 'package:mysql_client/mysql_client.dart';
 import 'package:test/scaffolding.dart';
 import 'package:test/test.dart' show fail;
 
+extension BinaryOrStringSubject on Subject<Object?> {
+  void isBinaryOrString() =>
+      anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
+}
+
 void testMysqlClient(
   dynamic host,
   int port,
@@ -514,9 +519,7 @@ create table book
       var typedAssoc = row.typedAssoc();
 
       check(typedAssoc['col_pk'].runtimeType).equals(int);
-      check(
-        typedAssoc['col_bit'],
-      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
+      check(typedAssoc['col_bit']).isBinaryOrString();
       check(typedAssoc['col_tinyint'].runtimeType).equals(int);
       check([bool, int]).contains(typedAssoc['col_bool'].runtimeType);
       check(typedAssoc['col_smallint'].runtimeType).equals(int);
@@ -539,24 +542,12 @@ create table book
 
       check(typedAssoc['col_char'].runtimeType).equals(String);
       check(typedAssoc['col_varchar'].runtimeType).equals(String);
-      check(
-        typedAssoc['col_binary'],
-      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
-      check(
-        typedAssoc['col_varbinary'],
-      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
-      check(
-        typedAssoc['col_tinyblob'],
-      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
-      check(
-        typedAssoc['col_blob'],
-      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
-      check(
-        typedAssoc['col_mediumblob'],
-      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
-      check(
-        typedAssoc['col_longblob'],
-      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
+      check(typedAssoc['col_binary']).isBinaryOrString();
+      check(typedAssoc['col_varbinary']).isBinaryOrString();
+      check(typedAssoc['col_tinyblob']).isBinaryOrString();
+      check(typedAssoc['col_blob']).isBinaryOrString();
+      check(typedAssoc['col_mediumblob']).isBinaryOrString();
+      check(typedAssoc['col_longblob']).isBinaryOrString();
       check(typedAssoc['col_tinytext'].runtimeType).equals(String);
       check(typedAssoc['col_text'].runtimeType).equals(String);
       check(typedAssoc['col_mediumtext'].runtimeType).equals(String);
