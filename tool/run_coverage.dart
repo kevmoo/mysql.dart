@@ -22,6 +22,7 @@ void main() async {
       '--coverage=$_coverageDir',
       'test/column_type_test.dart',
       'test/mysql_packet_test.dart',
+      'test/binary_blob_test.dart',
     ]);
 
     // Helper to run manual coverage
@@ -73,11 +74,13 @@ void main() async {
       8181,
       '$_coverageDir/mysql_client_tcp.vm.json',
     );
-    await runManualCoverage(
-      'test/mysql_client_socket.dart',
-      8182,
-      '$_coverageDir/mysql_client_socket.vm.json',
-    );
+    if (Platform.isLinux) {
+      await runManualCoverage(
+        'test/mysql_client_socket.dart',
+        8182,
+        '$_coverageDir/mysql_client_socket.vm.json',
+      );
+    }
     await runManualCoverage(
       'test/pool_integration.dart',
       8183,

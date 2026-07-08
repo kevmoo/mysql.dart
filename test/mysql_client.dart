@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:checks/checks.dart';
 import 'package:mysql_client/mysql_client.dart';
@@ -121,6 +122,8 @@ create table book
     check(
       row.typedColByName<DateTime>('created_at'),
     ).equals(DateTime.parse('2026-06-10 14:30:00'));
+
+    await conn.execute('DELETE FROM book WHERE id = :id', {'id': id});
   });
 
   test('testing select', () async {
@@ -510,7 +513,9 @@ create table book
       var typedAssoc = row.typedAssoc();
 
       check(typedAssoc['col_pk'].runtimeType).equals(int);
-      check(typedAssoc['col_bit'].runtimeType).equals(String);
+      check(
+        typedAssoc['col_bit'] is Uint8List || typedAssoc['col_bit'] is String,
+      ).isTrue();
       check(typedAssoc['col_tinyint'].runtimeType).equals(int);
       check([bool, int]).contains(typedAssoc['col_bool'].runtimeType);
       check(typedAssoc['col_smallint'].runtimeType).equals(int);
@@ -533,12 +538,12 @@ create table book
 
       check(typedAssoc['col_char'].runtimeType).equals(String);
       check(typedAssoc['col_varchar'].runtimeType).equals(String);
-      check(typedAssoc['col_binary'].runtimeType).equals(String);
-      check(typedAssoc['col_varbinary'].runtimeType).equals(String);
-      check(typedAssoc['col_tinyblob'].runtimeType).equals(String);
-      check(typedAssoc['col_blob'].runtimeType).equals(String);
-      check(typedAssoc['col_mediumblob'].runtimeType).equals(String);
-      check(typedAssoc['col_longblob'].runtimeType).equals(String);
+      check(typedAssoc['col_binary']).isA<Uint8List>();
+      check(typedAssoc['col_varbinary']).isA<Uint8List>();
+      check(typedAssoc['col_tinyblob']).isA<Uint8List>();
+      check(typedAssoc['col_blob']).isA<Uint8List>();
+      check(typedAssoc['col_mediumblob']).isA<Uint8List>();
+      check(typedAssoc['col_longblob']).isA<Uint8List>();
       check(typedAssoc['col_tinytext'].runtimeType).equals(String);
       check(typedAssoc['col_text'].runtimeType).equals(String);
       check(typedAssoc['col_mediumtext'].runtimeType).equals(String);
