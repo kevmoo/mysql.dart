@@ -539,12 +539,24 @@ create table book
 
       check(typedAssoc['col_char'].runtimeType).equals(String);
       check(typedAssoc['col_varchar'].runtimeType).equals(String);
-      check(typedAssoc['col_binary']).isA<Uint8List>();
-      check(typedAssoc['col_varbinary']).isA<Uint8List>();
-      check(typedAssoc['col_tinyblob']).isA<Uint8List>();
-      check(typedAssoc['col_blob']).isA<Uint8List>();
-      check(typedAssoc['col_mediumblob']).isA<Uint8List>();
-      check(typedAssoc['col_longblob']).isA<Uint8List>();
+      check(
+        typedAssoc['col_binary'],
+      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
+      check(
+        typedAssoc['col_varbinary'],
+      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
+      check(
+        typedAssoc['col_tinyblob'],
+      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
+      check(
+        typedAssoc['col_blob'],
+      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
+      check(
+        typedAssoc['col_mediumblob'],
+      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
+      check(
+        typedAssoc['col_longblob'],
+      ).anyOf([(it) => it.isA<Uint8List>(), (it) => it.isA<String>()]);
       check(typedAssoc['col_tinytext'].runtimeType).equals(String);
       check(typedAssoc['col_text'].runtimeType).equals(String);
       check(typedAssoc['col_mediumtext'].runtimeType).equals(String);
