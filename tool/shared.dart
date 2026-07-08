@@ -193,7 +193,6 @@ class DbContainer {
     stdout.writeln('Stopping and removing container $containerName...');
     await Process.run('podman', ['rm', '-f', containerName]);
     if (Platform.isLinux) {
-      await Process.run('sh', ['-c', 'pkill -9 -f rootlessport || true']);
       await Process.run('sh', ['-c', 'fuser -k 3306/tcp || true']);
     }
     await Future<void>.delayed(const Duration(seconds: 2));

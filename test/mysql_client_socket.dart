@@ -3,23 +3,11 @@ library;
 
 import 'dart:io';
 import 'package:test/test.dart';
+import '../tool/shared.dart';
 import 'mysql_client.dart';
 
 void main() async {
-  final isConnectable = await () async {
-    if (!Platform.isLinux && !Platform.isMacOS) return false;
-    try {
-      final socket = await Socket.connect(
-        InternetAddress('/tmp/mysql.sock', type: InternetAddressType.unix),
-        0,
-        timeout: const Duration(seconds: 2),
-      );
-      socket.destroy();
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }();
+  final isConnectable = await isUnixSocketConnectable('/tmp/mysql.sock');
 
   if (!isConnectable) {
     test(
