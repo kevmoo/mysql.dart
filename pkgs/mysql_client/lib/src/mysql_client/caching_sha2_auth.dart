@@ -14,8 +14,14 @@ class RSAPublicKey {
 RSAPublicKey parsePemPublicKey(String pem) {
   var base64str = pem
       .split('\n')
-      .where((l) => !l.startsWith('-----') && l.trim().isNotEmpty)
-      .join('');
+      .where(
+        (l) =>
+            !l.trim().startsWith('-----') &&
+            !l.contains('BEGIN') &&
+            !l.contains('END'),
+      )
+      .join('')
+      .replaceAll(RegExp(r'[^A-Za-z0-9+/=]'), '');
 
   var bytes = base64Decode(base64str);
   var offset = 0;
@@ -89,9 +95,13 @@ Uint8List _xorBytes(Uint8List a, Uint8List b) {
 
 Uint8List _mgf1(Uint8List seed, int maskLen) {
   var t = <int>[];
-  for (var counter = 0; counter < (maskLen / 20).ceil(); counter++) {
-    var c = Uint8List(4)..buffer.asByteData().setUint32(0, counter, Endian.big);
-    t.addAll(sha1.convert([...seed, ...c]).bytes);
+  var counterLimit = (maskLen + 19) ~/ 20;
+  var buffer = Uint8List(seed.length + 4);
+  buffer.setRange(0, seed.length, seed);
+  var byteData = buffer.buffer.asByteData();
+  for (var counter = 0; counter < counterLimit; counter++) {
+    byteData.setUint32(seed.length, counter, Endian.big);
+    t.addAll(sha1.convert(buffer).bytes);
   }
   return Uint8List.fromList(t.sublist(0, maskLen));
 }
@@ -108,9 +118,16 @@ Uint8List _encodeBigInt(BigInt b, int length) {
   for (var i = 0; i < hex.length; i += 2) {
     bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
   }
+  if (bytes.length > length) {
+    if (bytes.length == length + 1 && bytes[0] == 0) {
+      bytes = bytes.sublist(1);
+    } else {
+      throw Exception('Integer too large for designated target length');
+    }
+  }
   var res = Uint8List(length);
   var start = length - bytes.length;
-  res.setAll(start > 0 ? start : 0, bytes.sublist(start < 0 ? -start : 0));
+  res.setAll(start > 0 ? start : 0, bytes);
   return res;
 }
 
@@ -119,6 +136,11 @@ Uint8List encryptPassword(
   Uint8List scramble,
   RSAPublicKey key,
 ) {
+  if (scramble.length != 20) {
+    throw ArgumentError(
+      'Expected 20-byte authentication challenge; got ${scramble.length}',
+    );
+  }
   var pwdBytes = utf8.encode(password);
   var pwdZero = Uint8List.fromList([...pwdBytes, 0]);
   var maskedPassword = Uint8List(pwdZero.length);
@@ -129,6 +151,10 @@ Uint8List encryptPassword(
   // OAEP Encryption
   var k = (key.modulus.bitLength + 7) >> 3;
   var hLen = 20;
+
+  if (k < 2 * hLen + 2) {
+    throw Exception('RSA modulus too small for OAEP SHA-1 padding');
+  }
 
   if (maskedPassword.length > k - 2 * hLen - 2) {
     throw Exception('Message too long');

@@ -123,6 +123,9 @@ class MySQLConnection {
     return _connected;
   }
 
+  /// Returns the server RSA public key used or retrieved by this connection
+  String? get rsaPublicKey => _rsaPublicKey;
+
   /// Registers callack to be executed when this connection is closed
   void onClose(void Function() callback) {
     _onCloseCallbacks.add(callback);
@@ -235,6 +238,11 @@ class MySQLConnection {
             authSwitchPacket.payload as MySQLPacketAuthSwitchRequest;
 
         _activeAuthPluginName = payload.authPluginName;
+        if (payload.authPluginData.length >= 20) {
+          _scramble = Uint8List.fromList(payload.authPluginData.sublist(0, 20));
+        } else {
+          _scramble = Uint8List.fromList(payload.authPluginData);
+        }
 
         final responsePayload = switch (payload.authPluginName) {
           'mysql_native_password' =>
@@ -335,16 +343,10 @@ class MySQLConnection {
           }
 
           // send password to the server in plain text
-          final clearPassword = Uint8List.fromList([
-            ...utf8.encode(_password),
-            0,
-          ]);
           final authExtraDataResponse = MySQLPacket(
             sequenceID: packet.sequenceID + 1,
             payload: MySQLPacketExtraAuthDataResponse(
-              data: _activeAuthPluginName == 'sha256_password'
-                  ? clearPassword
-                  : Uint8List.fromList(utf8.encode(_password)),
+              data: Uint8List.fromList(utf8.encode(_password)),
             ),
             payloadLength: 0,
           );
@@ -485,7 +487,15 @@ class MySQLConnection {
 
     final authPluginName = payload.authPluginName;
     _activeAuthPluginName = authPluginName;
-    _scramble = payload.authPluginDataPart1;
+    if (payload.authPluginDataPart2 != null &&
+        payload.authPluginDataPart2!.length >= 12) {
+      _scramble = Uint8List.fromList(
+        payload.authPluginDataPart1 +
+            payload.authPluginDataPart2!.sublist(0, 12),
+      );
+    } else {
+      _scramble = payload.authPluginDataPart1;
+    }
 
     final responsePayload = switch (authPluginName) {
       'mysql_native_password' =>
