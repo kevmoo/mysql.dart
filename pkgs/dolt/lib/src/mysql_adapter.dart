@@ -59,6 +59,9 @@ final class DoltRowReader(this._row) extends RowReader {
     if (value == null) return null;
     if (value is bool) return value;
     if (value is num) return value > 0;
+    if (value is Uint8List) {
+      return value.isNotEmpty && value.any((b) => b > 0);
+    }
     final str = value.toString();
     final parsed = int.tryParse(str);
     if (parsed != null) return parsed > 0;
@@ -87,6 +90,13 @@ final class DoltRowReader(this._row) extends RowReader {
     if (value == null) return null;
     if (value is int) return value;
     if (value is num) return value.toInt();
+    if (value is Uint8List) {
+      var val = 0;
+      for (final b in value) {
+        val = (val << 8) | b;
+      }
+      return val;
+    }
     return int.parse(value.toString());
   }
 
@@ -94,7 +104,13 @@ final class DoltRowReader(this._row) extends RowReader {
   String? readString() {
     final value = _row.colAt(_index++);
     if (value == null) return null;
-    return value is String ? value : value.toString();
+    if (value is String) return value;
+    if (value is Map || value is List) {
+      throw StateError(
+        'Cannot read structured JSON (${value.runtimeType}) as String; use readJsonValue() instead',
+      );
+    }
+    return value.toString();
   }
 
   @override

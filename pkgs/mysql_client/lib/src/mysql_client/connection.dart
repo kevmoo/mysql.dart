@@ -1461,6 +1461,11 @@ class ResultSetRow {
     if (colIndex < 0 || colIndex >= _values.length) {
       throw const MySQLClientException('Column index is out of range');
     }
+    if (_colDefs[colIndex].type == MySQLColumnType.jsonType) {
+      throw const MySQLClientException(
+        'Cannot read JSON column as binary bytes; access decoded object directly',
+      );
+    }
     final value = _values[colIndex];
     if (value == null) return null;
     if (value is Uint8List) return value;
@@ -1469,7 +1474,7 @@ class ResultSetRow {
   }
 
   /// Get column data by column index (starting form 0)
-  dynamic colAt(int colIndex) {
+  Object? colAt(int colIndex) {
     if (colIndex < 0 || colIndex >= _values.length) {
       throw const MySQLClientException('Column index is out of range');
     }
@@ -1535,7 +1540,7 @@ class ResultSetRow {
   }
 
   /// Get column data by column name
-  dynamic colByName(String columnName) {
+  Object? colByName(String columnName) {
     final colIndex = _colDefs.indexWhere(
       (element) => element.name.toLowerCase() == columnName.toLowerCase(),
     );
@@ -1601,8 +1606,8 @@ class ResultSetRow {
   }
 
   /// Get data for all columns
-  Map<String, dynamic> assoc() {
-    final result = <String, dynamic>{};
+  Map<String, Object?> assoc() {
+    final result = <String, Object?>{};
 
     var colIndex = 0;
 

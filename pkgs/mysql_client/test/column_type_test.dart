@@ -358,6 +358,23 @@ void main() {
     final bytes = Uint8List.fromList([1, 0, 1]);
     check(sqlType.convertStringValueToProvidedType<Uint8List>(bytes))
         .equals(bytes);
+
+    check(
+      sqlType.convertStringValueToProvidedType<bool>(Uint8List.fromList([1])),
+    ).equals(true);
+    check(
+      sqlType.convertStringValueToProvidedType<bool>(Uint8List.fromList([0])),
+    ).equals(false);
+    check(
+      sqlType.convertStringValueToProvidedType<int>(
+        Uint8List.fromList([0x01, 0x02]),
+      ),
+    ).equals(0x0102);
+    check(
+      sqlType.convertStringValueToProvidedType<BigInt>(
+        Uint8List.fromList([0x01, 0x00, 0x00]),
+      ),
+    ).equals(BigInt.from(0x10000));
   });
 
   test('testing other datetime types and invalid DateTime conversion', () {

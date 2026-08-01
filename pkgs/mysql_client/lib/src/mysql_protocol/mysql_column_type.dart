@@ -44,9 +44,31 @@ extension type const MySQLColumnType(int _) implements int {
       return null;
     }
 
-    if (value is! String ||
-        this == MySQLColumnType.jsonType ||
-        this == MySQLColumnType.bitType) {
+    if (this == MySQLColumnType.bitType && value is Uint8List) {
+      if (value is T) return value as T;
+      if (T == bool) {
+        return (value.isNotEmpty && value.any((b) => b > 0)) as T;
+      }
+      if (T == int || T == num) {
+        var val = 0;
+        for (final b in value) {
+          val = (val << 8) | b;
+        }
+        return val as T;
+      }
+      if (T == BigInt) {
+        var val = BigInt.zero;
+        for (final b in value) {
+          val = (val << 8) | BigInt.from(b);
+        }
+        return val as T;
+      }
+      throw MySQLProtocolException(
+        'Can not convert MySQL type $this to requested type ${T.runtimeType}',
+      );
+    }
+
+    if (value is! String || this == MySQLColumnType.jsonType) {
       if (value is T) return value as T;
       throw MySQLProtocolException(
         'Can not convert MySQL type $this to requested type ${T.runtimeType}',
