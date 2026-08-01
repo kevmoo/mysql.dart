@@ -49,6 +49,7 @@ class MySQLConnection {
   final bool _secure;
   final SecurityContext? _securityContext;
   final bool Function(X509Certificate)? _onBadCertificate;
+  final Object? _host;
   final List<int> _incompleteBufferData = [];
   Object? _lastError;
   int _serverCapabilities = 0;
@@ -60,6 +61,7 @@ class MySQLConnection {
 
   MySQLConnection._({
     required this._socket,
+    required this._host,
     required this._username,
     required this._password,
     required this._collation,
@@ -82,13 +84,17 @@ class MySQLConnection {
   /// [databaseName] Optional database name to connect to.
   /// [collation] Optional collaction to use.
   ///
+  /// Note: When supplying a custom [securityContext], ensure that you explicitly
+  /// provide [onBadCertificate] returning `false` if you require strict Root CA
+  /// certificate validation, as omitted handlers fall back to allowing invalid certificates.
+  ///
   /// By default after connection is established, this library executes query to switch connection charset and collation:
   ///
   /// ```
   /// SET @@collation_connection=$_collation, @@character_set_client=utf8mb4, @@character_set_connection=utf8mb4, @@character_set_results=utf8mb4
   /// ```
   static Future<MySQLConnection> createConnection({
-    required dynamic host,
+    required Object? host,
     required int port,
     required String userName,
     required String password,
@@ -107,10 +113,11 @@ class MySQLConnection {
 
     final client = MySQLConnection._(
       socket: socket,
+      host: host,
       username: userName,
       password: password,
       databaseName: databaseName,
-      secure: secure,
+      secure: secure && socket.address.type != InternetAddressType.unix,
       securityContext: securityContext,
       onBadCertificate: onBadCertificate,
       collation: collation,
@@ -395,6 +402,7 @@ class MySQLConnection {
 
         final secureSocket = await SecureSocket.secure(
           _socket,
+          host: _host is String ? _host : null,
           context: _securityContext,
           onBadCertificate: _onBadCertificate ?? (certificate) => true,
         );
