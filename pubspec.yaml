@@ -2,7 +2,7 @@ name: mysql_dart_workspace
 publish_to: none
 
 environment:
-  sdk: ^3.13.0-100
+  sdk: ^3.13.0-0
 
 workspace:
   - pkgs/mysql_client
