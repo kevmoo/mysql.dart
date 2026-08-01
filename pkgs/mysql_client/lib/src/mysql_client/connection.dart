@@ -47,18 +47,27 @@ class MySQLConnection {
   final List<void Function()> _onCloseCallbacks = [];
   bool _inTransaction = false;
   final bool _secure;
+  final SecurityContext? _securityContext;
+  final bool Function(X509Certificate)? _onBadCertificate;
+  final Object? _host;
   final List<int> _incompleteBufferData = [];
   Object? _lastError;
   int _serverCapabilities = 0;
   String? _activeAuthPluginName;
   int _timeoutMs = 10000;
 
+  bool get _isTransportSecure =>
+      _secure || _socket.address.type == InternetAddressType.unix;
+
   MySQLConnection._({
     required this._socket,
+    required this._host,
     required this._username,
     required this._password,
     required this._collation,
     this._secure = true,
+    this._securityContext,
+    this._onBadCertificate,
     this._databaseName,
   });
 
@@ -75,17 +84,23 @@ class MySQLConnection {
   /// [databaseName] Optional database name to connect to.
   /// [collation] Optional collaction to use.
   ///
+  /// Note: When supplying a custom [securityContext], ensure that you explicitly
+  /// provide [onBadCertificate] returning `false` if you require strict Root CA
+  /// certificate validation, as omitted handlers fall back to allowing invalid certificates.
+  ///
   /// By default after connection is established, this library executes query to switch connection charset and collation:
   ///
   /// ```
   /// SET @@collation_connection=$_collation, @@character_set_client=utf8mb4, @@character_set_connection=utf8mb4, @@character_set_results=utf8mb4
   /// ```
   static Future<MySQLConnection> createConnection({
-    required dynamic host,
+    required Object? host,
     required int port,
     required String userName,
     required String password,
     bool secure = true,
+    SecurityContext? securityContext,
+    bool Function(X509Certificate)? onBadCertificate,
     String? databaseName,
     String collation = 'utf8mb4_general_ci',
   }) async {
@@ -98,10 +113,13 @@ class MySQLConnection {
 
     final client = MySQLConnection._(
       socket: socket,
+      host: host,
       username: userName,
       password: password,
       databaseName: databaseName,
-      secure: secure,
+      secure: secure && socket.address.type != InternetAddressType.unix,
+      securityContext: securityContext,
+      onBadCertificate: onBadCertificate,
       collation: collation,
     );
 
@@ -247,7 +265,7 @@ class MySQLConnection {
           );
         }
 
-        if (_secure == false) {
+        if (!_isTransportSecure) {
           throw MySQLClientException(
             'Auth plugin $_activeAuthPluginName is supported only with secure connections. Pass secure: true or use another auth method',
           );
@@ -384,7 +402,9 @@ class MySQLConnection {
 
         final secureSocket = await SecureSocket.secure(
           _socket,
-          onBadCertificate: (certificate) => true,
+          host: _host is String ? _host : null,
+          context: _securityContext,
+          onBadCertificate: _onBadCertificate ?? (certificate) => true,
         );
 
         // switch socket
