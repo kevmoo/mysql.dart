@@ -1,0 +1,20 @@
+name: dolt
+description: Modular serverless Dolt database hooks, typed_sql adapter, and Shelf middleware.
+version: 0.1.0-wip
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0-100
+
+dependencies:
+  meta: ^1.11.0
+  mysql_client:
+  shelf: ^1.4.0
+  typed_sql: ^0.1.10
+
+dev_dependencies:
+  checks: ^0.3.1
+  dart_flutter_team_lints: ^3.0.0
+  test: ^1.25.2
+  test_descriptor: ^2.0.0

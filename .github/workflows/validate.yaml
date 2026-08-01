@@ -14,11 +14,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: ['3.12.0', dev]
+        sdk: [dev]
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Dart SDK
         uses: dart-lang/setup-dart@v1
@@ -29,22 +29,30 @@ jobs:
         run: dart pub get
 
       - name: Check formatting
-        if: matrix.sdk == 'dev'
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze code
-        if: matrix.sdk == '3.12.0'
-        run: dart analyze
-
-      - name: Analyze code (dev)
-        if: matrix.sdk == 'dev'
         run: dart analyze --fatal-infos
 
-      - name: Run unit tests
+      - name: Install Dolt CLI
+        run: sudo bash -c 'curl -L https://github.com/dolthub/dolt/releases/latest/download/install.sh | bash'
+
+      - name: Run mysql_client unit tests
+        working-directory: pkgs/mysql_client
         run: dart test
 
       - name: Run MySQL integration tests
+        working-directory: pkgs/mysql_client
         run: dart tool/run_integration_tests.dart
 
       - name: Run Dolt integration tests
+        working-directory: pkgs/mysql_client
         run: dart tool/run_dolt_tests.dart
+
+      - name: Run dolt shelf unit tests
+        working-directory: pkgs/dolt
+        run: dart test test/shelf_test.dart
+
+      - name: Run dolt native integration tests
+        working-directory: pkgs/dolt
+        run: dart test test/integration_test.dart

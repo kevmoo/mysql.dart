@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+
 import 'package:buffer/buffer.dart';
 
 import '../mysql_packet.dart';

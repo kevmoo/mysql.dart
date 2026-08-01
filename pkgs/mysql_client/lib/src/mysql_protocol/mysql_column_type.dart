@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+
 import '../exception.dart';
 import 'mysql_protocol_extension.dart';
 
