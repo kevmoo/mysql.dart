@@ -27,4 +27,13 @@ void main() async {
     'your_password',
     'testdb',
   );
+
+  testMysqlClient(
+    InternetAddress('/tmp/mysql.sock', type: InternetAddressType.unix),
+    3306,
+    'your_user',
+    'your_password',
+    'testdb',
+    secure: false, // This will blow up for TCP if caching_sha2 is used, but should work for UNIX sockets
+  );
 }

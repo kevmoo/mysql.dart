@@ -1,16 +1,19 @@
 import 'dart:async';
+import 'dart:io';
 
 import '../../mysql_client.dart';
 
 /// Class to create and manage pool of database connections
 class MySQLConnectionPool {
-  final String host;
+  final Object? host;
   final int port;
   final String userName;
   final String _password;
   final int maxConnections;
   final String? databaseName;
   final bool secure;
+  final SecurityContext? securityContext;
+  final bool Function(X509Certificate)? onBadCertificate;
   final String collation;
   final int timeoutMs;
   final bool serverPublicKeyRetrieval;
@@ -28,6 +31,10 @@ class MySQLConnectionPool {
   /// Almost all parameters are identical to [MySQLConnection.createConnection]
   /// Pass [maxConnections] to tell pool maximum number of connections it can use
   /// You can specify [timeoutMs], it will be passed to [MySQLConnection.connect] method when creating new connections
+  ///
+  /// Note: When supplying a custom [securityContext], ensure that you explicitly
+  /// provide [onBadCertificate] returning `false` if you require strict Root CA
+  /// certificate validation, as omitted handlers fall back to allowing invalid certificates.
   MySQLConnectionPool({
     required this.host,
     required this.port,
@@ -36,6 +43,8 @@ class MySQLConnectionPool {
     required this.maxConnections,
     this.databaseName,
     this.secure = true,
+    this.securityContext,
+    this.onBadCertificate,
     this.collation = 'utf8_general_ci',
     this.timeoutMs = 10000,
     this.serverPublicKeyRetrieval = false,
@@ -145,6 +154,8 @@ class MySQLConnectionPool {
           password: _password,
           databaseName: databaseName,
           secure: secure,
+          securityContext: securityContext,
+          onBadCertificate: onBadCertificate,
           collation: collation,
           serverPublicKeyRetrieval: serverPublicKeyRetrieval,
           rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
@@ -208,6 +219,8 @@ class MySQLConnectionPool {
         password: _password,
         databaseName: databaseName,
         secure: secure,
+        securityContext: securityContext,
+        onBadCertificate: onBadCertificate,
         collation: collation,
         serverPublicKeyRetrieval: serverPublicKeyRetrieval,
         rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
