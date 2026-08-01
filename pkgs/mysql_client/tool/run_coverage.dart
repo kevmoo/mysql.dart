@@ -1,6 +1,7 @@
 #!/usr/bin/env dart
 
 import 'dart:io';
+
 import 'shared.dart';
 
 const _coverageDir = '.dart_tool/coverage';

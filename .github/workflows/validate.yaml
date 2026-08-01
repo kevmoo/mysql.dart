@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: ['3.13.0', dev]
+        sdk: [dev]
 
     steps:
       - name: Checkout repository
@@ -29,15 +29,9 @@ jobs:
         run: dart pub get
 
       - name: Check formatting
-        if: matrix.sdk == 'dev'
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze code
-        if: matrix.sdk == '3.13.0'
-        run: dart analyze
-
-      - name: Analyze code (dev)
-        if: matrix.sdk == 'dev'
         run: dart analyze --fatal-infos
 
       - name: Install Dolt CLI

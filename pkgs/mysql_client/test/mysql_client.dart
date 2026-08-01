@@ -127,9 +127,8 @@ create table book
     });
     final row = await result.rowsStream.first;
     check(row.colByName('created_at')).equals('2026-06-10 14:30:00');
-    check(
-      row.typedColByName<DateTime>('created_at'),
-    ).equals(DateTime.parse('2026-06-10 14:30:00'));
+    check(row.typedColByName<DateTime>('created_at'))
+        .equals(DateTime.parse('2026-06-10 14:30:00'));
   });
 
   test('testing select', () async {
@@ -312,9 +311,8 @@ create table book
       fail('Exception is not thrown');
     } catch (e) {
       check(e).isA<MySQLClientException>();
-      check(
-        e.toString(),
-      ).equals('MySQLClientException: Already in transaction');
+      check(e.toString())
+          .equals('MySQLClientException: Already in transaction');
     }
   });
 
@@ -395,9 +393,8 @@ create table book
     );
     final row = await selectResult.rowsStream.first;
     check(row.colByName('created_at')).equals('2026-06-10 15:45:00');
-    check(
-      row.typedColByName<DateTime>('created_at'),
-    ).equals(DateTime.parse('2026-06-10 15:45:00'));
+    check(row.typedColByName<DateTime>('created_at'))
+        .equals(DateTime.parse('2026-06-10 15:45:00'));
   });
 
   test('testing prepared stmt select', () async {

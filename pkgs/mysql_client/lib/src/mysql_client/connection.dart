@@ -132,9 +132,8 @@ class MySQLConnection {
 
     _socketSubscription = _socket.listen((data) {
       for (final chunk in _splitPackets(data)) {
-        _processSocketData(
-          chunk,
-        ).onError((error, stackTrace) => _lastError = error);
+        _processSocketData(chunk)
+            .onError((error, stackTrace) => _lastError = error);
       }
     });
 
@@ -393,9 +392,8 @@ class MySQLConnection {
 
         _socketSubscription = _socket.listen((data) {
           for (final chunk in _splitPackets(data)) {
-            _processSocketData(
-              chunk,
-            ).onError((error, stackTrace) => _lastError = error);
+            _processSocketData(chunk)
+                .onError((error, stackTrace) => _lastError = error);
           }
         });
 
@@ -461,9 +459,8 @@ class MySQLConnection {
 
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(
-        _MySQLConnectionState.connectionEstablished,
-      ).timeout(Duration(milliseconds: _timeoutMs));
+      await _waitForState(_MySQLConnectionState.connectionEstablished)
+          .timeout(Duration(milliseconds: _timeoutMs));
     }
 
     _state = _MySQLConnectionState.waitingCommandResponse;
@@ -766,9 +763,8 @@ class MySQLConnection {
 
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(
-        _MySQLConnectionState.connectionEstablished,
-      ).timeout(Duration(milliseconds: _timeoutMs));
+      await _waitForState(_MySQLConnectionState.connectionEstablished)
+          .timeout(Duration(milliseconds: _timeoutMs));
     }
 
     _state = _MySQLConnectionState.waitingCommandResponse;
@@ -884,9 +880,8 @@ class MySQLConnection {
 
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(
-        _MySQLConnectionState.connectionEstablished,
-      ).timeout(Duration(milliseconds: _timeoutMs));
+      await _waitForState(_MySQLConnectionState.connectionEstablished)
+          .timeout(Duration(milliseconds: _timeoutMs));
     }
 
     _state = _MySQLConnectionState.waitingCommandResponse;
@@ -1075,9 +1070,8 @@ class MySQLConnection {
 
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(
-        _MySQLConnectionState.connectionEstablished,
-      ).timeout(Duration(milliseconds: _timeoutMs));
+      await _waitForState(_MySQLConnectionState.connectionEstablished)
+          .timeout(Duration(milliseconds: _timeoutMs));
     }
 
     final payload = MySQLPacketCommStmtClose(

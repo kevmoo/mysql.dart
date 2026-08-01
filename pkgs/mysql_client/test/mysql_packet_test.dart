@@ -182,23 +182,20 @@ void main() {
       test('test encoding int value 16777216', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(16777216);
-        check(
-          writer.toBytes(),
-        ).deepEquals([0xfe, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
+        check(writer.toBytes())
+            .deepEquals([0xfe, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
       });
       test('test encoding int value 16777217', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(16777217);
-        check(
-          writer.toBytes(),
-        ).deepEquals([0xfe, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
+        check(writer.toBytes())
+            .deepEquals([0xfe, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
       });
       test('test encoding int value 9223372036854775807', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(9223372036854775807);
-        check(
-          writer.toBytes(),
-        ).deepEquals([0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
+        check(writer.toBytes())
+            .deepEquals([0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]);
       });
     });
   });
@@ -670,9 +667,8 @@ void main() {
       check(payload.protocolVersion).equals(10);
       check(payload.serverVersion).equals('5.7.35-38');
       check(payload.connectionID).equals(123);
-      check(
-        payload.authPluginDataPart1,
-      ).deepEquals(Uint8List.fromList(HEX.decode('181e73526349597c')));
+      check(payload.authPluginDataPart1)
+          .deepEquals(Uint8List.fromList(HEX.decode('181e73526349597c')));
       check(payload.authPluginDataPart2).isNotNull().deepEquals(
         Uint8List.fromList(HEX.decode('07317a2531721d587825181d00')),
       );
@@ -682,18 +678,14 @@ void main() {
       //actual network data 0xffffffc1
       check(payload.capabilityFlags).equals(0xc1ffffff);
 
-      check(
-        payload.capabilityFlags & mysqlCapFlagClientMultiStatements,
-      ).isGreaterThan(0);
-      check(
-        payload.capabilityFlags & mysqlCapFlagClientMultiResults,
-      ).isGreaterThan(0);
-      check(
-        payload.capabilityFlags & mysqlCapFlagClientPluginAuth,
-      ).isGreaterThan(0);
-      check(
-        payload.capabilityFlags & mysqlCapFlagClientPluginAuth,
-      ).isGreaterThan(0);
+      check(payload.capabilityFlags & mysqlCapFlagClientMultiStatements)
+          .isGreaterThan(0);
+      check(payload.capabilityFlags & mysqlCapFlagClientMultiResults)
+          .isGreaterThan(0);
+      check(payload.capabilityFlags & mysqlCapFlagClientPluginAuth)
+          .isGreaterThan(0);
+      check(payload.capabilityFlags & mysqlCapFlagClientPluginAuth)
+          .isGreaterThan(0);
     });
 
     test('testing response ok packet', () {
@@ -710,66 +702,63 @@ void main() {
       check(payload.affectedRows.toInt()).equals(0);
     });
 
-    test(
-      'testing stmt prepare ok packet decoding (standard and Apache Doris truncated)',
-      () {
-        // Standard prepare OK: header 0x00, stmtID 1, cols 2, params 3, filler 0x00, warnings 5
-        final standardBuffer = Uint8List.fromList([
-          0x00,
-          0x01,
-          0x00,
-          0x00,
-          0x00,
-          0x02,
-          0x00,
-          0x03,
-          0x00,
-          0x00,
-          0x05,
-          0x00,
-        ]);
-        final standardPkt = MySQLPacketStmtPrepareOK.decode(standardBuffer);
-        check(standardPkt.header).equals(0x00);
-        check(standardPkt.stmtID).equals(1);
-        check(standardPkt.numOfCols).equals(2);
-        check(standardPkt.numOfParams).equals(3);
-        check(standardPkt.numOfWarnings).equals(5);
+    test('testing stmt prepare ok packet decoding (standard and Apache Doris truncated)', () {
+      // Standard prepare OK: header 0x00, stmtID 1, cols 2, params 3, filler 0x00, warnings 5
+      final standardBuffer = Uint8List.fromList([
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x03,
+        0x00,
+        0x00,
+        0x05,
+        0x00,
+      ]);
+      final standardPkt = MySQLPacketStmtPrepareOK.decode(standardBuffer);
+      check(standardPkt.header).equals(0x00);
+      check(standardPkt.stmtID).equals(1);
+      check(standardPkt.numOfCols).equals(2);
+      check(standardPkt.numOfParams).equals(3);
+      check(standardPkt.numOfWarnings).equals(5);
 
-        // Truncated Apache Doris prepare OK (omits trailing warnings count)
-        final dorisBuffer = Uint8List.fromList([
-          0x00,
-          0x01,
-          0x00,
-          0x00,
-          0x00,
-          0x02,
-          0x00,
-          0x03,
-          0x00,
-          0x00,
-        ]);
-        final dorisPkt = MySQLPacketStmtPrepareOK.decode(dorisBuffer);
-        check(dorisPkt.stmtID).equals(1);
-        check(dorisPkt.numOfWarnings).equals(0);
+      // Truncated Apache Doris prepare OK (omits trailing warnings count)
+      final dorisBuffer = Uint8List.fromList([
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x03,
+        0x00,
+        0x00,
+      ]);
+      final dorisPkt = MySQLPacketStmtPrepareOK.decode(dorisBuffer);
+      check(dorisPkt.stmtID).equals(1);
+      check(dorisPkt.numOfWarnings).equals(0);
 
-        // Edge case: exactly 1 trailing byte remaining (prevents RangeError on getUint16)
-        final oneByteBuffer = Uint8List.fromList([
-          0x00,
-          0x01,
-          0x00,
-          0x00,
-          0x00,
-          0x02,
-          0x00,
-          0x03,
-          0x00,
-          0x00,
-          0x05,
-        ]);
-        final oneBytePkt = MySQLPacketStmtPrepareOK.decode(oneByteBuffer);
-        check(oneBytePkt.numOfWarnings).equals(0);
-      },
-    );
+      // Edge case: exactly 1 trailing byte remaining (prevents RangeError on getUint16)
+      final oneByteBuffer = Uint8List.fromList([
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x03,
+        0x00,
+        0x00,
+        0x05,
+      ]);
+      final oneBytePkt = MySQLPacketStmtPrepareOK.decode(oneByteBuffer);
+      check(oneBytePkt.numOfWarnings).equals(0);
+    });
   });
 
   group('testing COM_STMT_EXECUTE packet encoding', () {
@@ -790,15 +779,12 @@ void main() {
       },
     );
 
-    test(
-      'encoding local DateTime parameter in COM_STMT_EXECUTE preserves format without Z',
-      () {
-        final dt = DateTime(2026, 6, 10, 14, 30, 0);
-        final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dt]);
-        final encoded = pkt.encode();
-        final (str, _) = encoded.getUtf8LengthEncodedString(14);
-        check(str).equals('2026-06-10 14:30:00.000');
-      },
-    );
+    test('encoding local DateTime parameter in COM_STMT_EXECUTE preserves format without Z', () {
+      final dt = DateTime(2026, 6, 10, 14, 30, 0);
+      final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dt]);
+      final encoded = pkt.encode();
+      final (str, _) = encoded.getUtf8LengthEncodedString(14);
+      check(str).equals('2026-06-10 14:30:00.000');
+    });
   });
 }
