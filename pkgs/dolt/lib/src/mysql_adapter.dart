@@ -57,35 +57,44 @@ final class DoltRowReader(this._row) extends RowReader {
   bool? readBool() {
     final value = _row.colAt(_index++);
     if (value == null) return null;
-    final parsed = int.tryParse(value);
+    if (value is bool) return value;
+    if (value is num) return value > 0;
+    final str = value.toString();
+    final parsed = int.tryParse(str);
     if (parsed != null) return parsed > 0;
-    return value.toLowerCase() == 'true';
+    return str.toLowerCase() == 'true';
   }
 
   @override
   DateTime? readDateTime() {
     final value = _row.colAt(_index++);
     if (value == null) return null;
-    return DateTime.parse(value).toUtc();
+    if (value is DateTime) return value.toUtc();
+    return DateTime.parse(value.toString()).toUtc();
   }
 
   @override
   double? readDouble() {
     final value = _row.colAt(_index++);
     if (value == null) return null;
-    return double.parse(value);
+    if (value is num) return value.toDouble();
+    return double.parse(value.toString());
   }
 
   @override
   int? readInt() {
     final value = _row.colAt(_index++);
     if (value == null) return null;
-    return int.parse(value);
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.parse(value.toString());
   }
 
   @override
   String? readString() {
-    return _row.colAt(_index++);
+    final value = _row.colAt(_index++);
+    if (value == null) return null;
+    return value is String ? value : value.toString();
   }
 
   @override
@@ -97,7 +106,10 @@ final class DoltRowReader(this._row) extends RowReader {
   JsonValue? readJsonValue() {
     final value = _row.colAt(_index++);
     if (value == null) return null;
-    return JsonValue(jsonDecode(value));
+    if (value is String) {
+      return JsonValue(jsonDecode(value));
+    }
+    return JsonValue(value);
   }
 
   @override

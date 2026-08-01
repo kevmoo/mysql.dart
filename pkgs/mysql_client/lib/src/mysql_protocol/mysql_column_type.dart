@@ -53,7 +53,7 @@ extension type const MySQLColumnType(int _) implements int {
       );
     }
 
-    final strValue = value as String;
+    final strValue = value;
     return switch (T) {
       const (String) || const (dynamic) || const (Object) => strValue as T,
       const (bool) =>
