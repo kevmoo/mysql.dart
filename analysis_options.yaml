@@ -11,5 +11,3 @@ linter:
     - simple_directive_paths
     - unnecessary_const_in_enum_constructor
     - unnecessary_ignore
-    - unnecessary_type_name_in_constructor
-    - use_primary_constructors
