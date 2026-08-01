@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import '../exception.dart';
@@ -290,7 +291,11 @@ extension type const MySQLColumnType(int _) implements int {
     case MySQLColumnType.newDecimalType:
     case MySQLColumnType.jsonType:
       final type = MySQLColumnType(columnType);
-      if (type.isBinary(charset)) {
+      if (type == MySQLColumnType.jsonType) {
+        final (val, len) = buffer.getUtf8LengthEncodedString(startOffset);
+        return (jsonDecode(val), len);
+      }
+      if (type == MySQLColumnType.bitType || type.isBinary(charset)) {
         return buffer.getLengthEncodedBytes(startOffset);
       }
       return buffer.getUtf8LengthEncodedString(startOffset);

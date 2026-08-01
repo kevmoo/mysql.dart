@@ -409,7 +409,9 @@ create table book
   test('testing prepared stmt select JSON', () async {
     final stmt = await conn.prepare('SELECT CAST(? AS JSON) as col');
     final result = await stmt.execute(['{"key": "val"}']);
-    check(result.rows.first.colByName('col')).equals('{"key": "val"}');
+    check(result.rows.first.colByName('col'))
+        .isA<Map>()
+        .deepEquals({'key': 'val'});
     await stmt.deallocate();
   });
 
@@ -551,10 +553,12 @@ create table book
       check(typedAssoc['col_longtext'].runtimeType).equals(String);
       check(typedAssoc['col_enum'].runtimeType).equals(String);
       check(typedAssoc['col_set'].runtimeType).equals(String);
-      check(typedAssoc['col_json'].runtimeType).equals(String);
+      check(typedAssoc['col_json'])
+          .isA<Map<String, dynamic>>()
+          .deepEquals({'key': 'val'});
       final colJson = row.colByName('col_json');
       check(colJson).isNotNull();
-      check(['{"key": "val"}', '{"key":"val"}']).contains(colJson as String);
+      check(colJson).isA<Map<String, dynamic>>().deepEquals({'key': 'val'});
     }
 
     var groupedResponse = await conn.execute('''
