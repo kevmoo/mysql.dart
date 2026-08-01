@@ -11,11 +11,18 @@ final class DoltProcess(this._process, this.port, this.directory) {
   /// [directory].
   static Future<DoltProcess> start({
     String directoryPath = '.dart_tool/dolt_dev',
+    String authorName = 'Dolt Bot',
+    String authorEmail = 'dolt@example.com',
     void Function(String)? onStdout,
     void Function(String)? onStderr,
   }) async {
     try {
-      await Process.run('dolt', const ['--version']);
+      final res = await Process.run('dolt', const ['version']);
+      if (res.exitCode != 0) {
+        throw ProcessException('dolt', const [
+          'version',
+        ], 'Binary returned non-zero: ${res.stderr}');
+      }
     } on ProcessException catch (_) {
       throw const ProcessException('dolt', [], 'Binary not found on PATH.');
     }
@@ -27,8 +34,10 @@ final class DoltProcess(this._process, this.port, this.directory) {
 
     final doltRepoDir = Directory('${doltDir.path}/.dolt');
     if (!doltRepoDir.existsSync()) {
-      final initRes = await Process.run('dolt', const [
+      final initRes = await Process.run('dolt', [
         'init',
+        '--name=$authorName',
+        '--email=$authorEmail',
       ], workingDirectory: doltDir.path);
       if (initRes.exitCode != 0) {
         throw ProcessException(
