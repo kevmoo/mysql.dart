@@ -1,16 +1,14 @@
-import 'dart:async';
 import 'dart:io';
 
-import 'package:test/test.dart';
-
 import 'package:mysql_client/mysql_client.dart';
+import 'package:test/test.dart';
 
 void main() {
   test(
     'Custom TLS configuration passing is verified via MySQLConnectionPool',
     () {
       final securityContext = SecurityContext();
-      final onBadCertificate = (X509Certificate cert) => true;
+      bool onBadCertificate(X509Certificate cert) => true;
 
       final pool = MySQLConnectionPool(
         host: '127.0.0.1',

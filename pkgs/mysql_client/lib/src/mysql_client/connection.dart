@@ -64,11 +64,10 @@ class MySQLConnection {
     required this._password,
     required this._collation,
     this._secure = true,
-    SecurityContext? securityContext,
-    bool Function(X509Certificate)? onBadCertificate,
+    this._securityContext,
+    this._onBadCertificate,
     this._databaseName,
-  }) : _securityContext = securityContext,
-       _onBadCertificate = onBadCertificate;
+  });
 
   /// Creates connection with provided options.
   ///
