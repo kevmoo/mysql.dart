@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: ['3.12.0', dev]
+        sdk: ['3.13.0', dev]
 
     steps:
       - name: Checkout repository
@@ -33,7 +33,7 @@ jobs:
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze code
-        if: matrix.sdk == '3.12.0'
+        if: matrix.sdk == '3.13.0'
         run: dart analyze
 
       - name: Analyze code (dev)
@@ -44,7 +44,9 @@ jobs:
         run: dart test
 
       - name: Run MySQL integration tests
+        working-directory: pkgs/mysql_client
         run: dart tool/run_integration_tests.dart
 
       - name: Run Dolt integration tests
+        working-directory: pkgs/mysql_client
         run: dart tool/run_dolt_tests.dart
