@@ -47,11 +47,16 @@ class MySQLConnection {
   final List<void Function()> _onCloseCallbacks = [];
   bool _inTransaction = false;
   final bool _secure;
+  final SecurityContext? _securityContext;
+  final bool Function(X509Certificate)? _onBadCertificate;
   final List<int> _incompleteBufferData = [];
   Object? _lastError;
   int _serverCapabilities = 0;
   String? _activeAuthPluginName;
   int _timeoutMs = 10000;
+
+  bool get _isTransportSecure =>
+      _secure || _socket.address.type == InternetAddressType.unix;
 
   MySQLConnection._({
     required this._socket,
@@ -59,8 +64,11 @@ class MySQLConnection {
     required this._password,
     required this._collation,
     this._secure = true,
+    SecurityContext? securityContext,
+    bool Function(X509Certificate)? onBadCertificate,
     this._databaseName,
-  });
+  }) : _securityContext = securityContext,
+       _onBadCertificate = onBadCertificate;
 
   /// Creates connection with provided options.
   ///
@@ -86,6 +94,8 @@ class MySQLConnection {
     required String userName,
     required String password,
     bool secure = true,
+    SecurityContext? securityContext,
+    bool Function(X509Certificate)? onBadCertificate,
     String? databaseName,
     String collation = 'utf8mb4_general_ci',
   }) async {
@@ -102,6 +112,8 @@ class MySQLConnection {
       password: password,
       databaseName: databaseName,
       secure: secure,
+      securityContext: securityContext,
+      onBadCertificate: onBadCertificate,
       collation: collation,
     );
 
@@ -247,7 +259,7 @@ class MySQLConnection {
           );
         }
 
-        if (_secure == false) {
+        if (!_isTransportSecure) {
           throw MySQLClientException(
             'Auth plugin $_activeAuthPluginName is supported only with secure connections. Pass secure: true or use another auth method',
           );
@@ -384,7 +396,8 @@ class MySQLConnection {
 
         final secureSocket = await SecureSocket.secure(
           _socket,
-          onBadCertificate: (certificate) => true,
+          context: _securityContext,
+          onBadCertificate: _onBadCertificate ?? (certificate) => true,
         );
 
         // switch socket
