@@ -21,11 +21,11 @@ RSAPublicKey parsePemPublicKey(String pem) {
   var offset = 0;
 
   int readLength() {
-    int len = bytes[offset++];
+    var len = bytes[offset++];
     if (len & 0x80 != 0) {
-      int count = len & 0x7F;
+      var count = len & 0x7F;
       len = 0;
-      for (int i = 0; i < count; i++) {
+      for (var i = 0; i < count; i++) {
         len = (len << 8) | bytes[offset++];
       }
     }
@@ -33,7 +33,7 @@ RSAPublicKey parsePemPublicKey(String pem) {
   }
 
   void verifyTag(int tag) {
-    if (bytes[offset++] != tag) throw FormatException("Expected tag $tag");
+    if (bytes[offset++] != tag) throw FormatException('Expected tag $tag');
   }
 
   try {
@@ -43,7 +43,7 @@ RSAPublicKey parsePemPublicKey(String pem) {
 
     // AlgorithmIdentifier (SEQUENCE)
     verifyTag(0x30);
-    int algLen = readLength();
+    var algLen = readLength();
     offset += algLen; // skip algorithm identifier
 
     // subjectPublicKey (BIT STRING)
@@ -58,13 +58,13 @@ RSAPublicKey parsePemPublicKey(String pem) {
 
     // modulus (INTEGER)
     verifyTag(0x02);
-    int modLen = readLength();
+    var modLen = readLength();
     var modulusBytes = bytes.sublist(offset, offset + modLen);
     offset += modLen;
 
     // exponent (INTEGER)
     verifyTag(0x02);
-    int expLen = readLength();
+    var expLen = readLength();
     var exponentBytes = bytes.sublist(offset, offset + expLen);
     offset += expLen;
 
@@ -75,7 +75,7 @@ RSAPublicKey parsePemPublicKey(String pem) {
 
     return RSAPublicKey(toBigInt(modulusBytes), toBigInt(exponentBytes));
   } catch (e) {
-    throw FormatException("Invalid PEM format: $e");
+    throw FormatException('Invalid PEM format: $e');
   }
 }
 
@@ -103,7 +103,7 @@ BigInt _decodeBigInt(Uint8List b) {
 
 Uint8List _encodeBigInt(BigInt b, int length) {
   var hex = b.toRadixString(16);
-  if (hex.length % 2 != 0) hex = '0' + hex;
+  if (hex.length % 2 != 0) hex = '0$hex';
   var bytes = <int>[];
   for (var i = 0; i < hex.length; i += 2) {
     bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
@@ -127,8 +127,8 @@ Uint8List encryptPassword(
   }
 
   // OAEP Encryption
-  int k = (key.modulus.bitLength + 7) >> 3;
-  int hLen = 20;
+  var k = (key.modulus.bitLength + 7) >> 3;
+  var hLen = 20;
 
   if (maskedPassword.length > k - 2 * hLen - 2) {
     throw Exception('Message too long');
@@ -141,7 +141,9 @@ Uint8List encryptPassword(
 
   var rand = Random.secure();
   var seed = Uint8List(hLen);
-  for (var i = 0; i < hLen; i++) seed[i] = rand.nextInt(256);
+  for (var i = 0; i < hLen; i++) {
+    seed[i] = rand.nextInt(256);
+  }
 
   var dbMask = _mgf1(seed, k - hLen - 1);
   var maskedDB = _xorBytes(db, dbMask);

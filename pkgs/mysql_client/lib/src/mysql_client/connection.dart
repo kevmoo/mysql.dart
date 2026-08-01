@@ -63,11 +63,10 @@ class MySQLConnection {
     required this._password,
     required this._collation,
     this._secure = true,
-    bool serverPublicKeyRetrieval = false,
-    String? rsaPublicKey,
+    this._serverPublicKeyRetrieval = false,
+    this._rsaPublicKey,
     this._databaseName,
-  }) : _serverPublicKeyRetrieval = serverPublicKeyRetrieval,
-       _rsaPublicKey = rsaPublicKey;
+  });
 
   /// Creates connection with provided options.
   ///
