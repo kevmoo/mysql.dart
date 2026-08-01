@@ -47,7 +47,8 @@ extension MySQLUint8ListExtension on Uint8List {
       strLength.$2 + strLength.$1.toInt(),
     );
 
-    return (tmp2, strLength.$2 + strLength.$1.toInt());
+    final resultBytes = tmp2.length <= 64 ? Uint8List.fromList(tmp2) : tmp2;
+    return (resultBytes, strLength.$2 + strLength.$1.toInt());
   }
 }
 

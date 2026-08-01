@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
+
+import '../mysql_column_type.dart';
 
 import '../mysql_packet.dart';
 import '../mysql_protocol_extension.dart';
@@ -27,7 +30,12 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
         offset += 1;
       } else {
         final colDef = colDefs[x];
-        if (colDef.type.isBinary(colDef.charset)) {
+        if (colDef.type == MySQLColumnType.jsonType) {
+          final (val, len) = buffer.getUtf8LengthEncodedString(offset);
+          values.add(jsonDecode(val));
+          offset += len;
+        } else if (colDef.type == MySQLColumnType.bitType ||
+            colDef.type.isBinary(colDef.charset)) {
           final (bytes, len) = buffer.getLengthEncodedBytes(offset);
           values.add(bytes);
           offset += len;

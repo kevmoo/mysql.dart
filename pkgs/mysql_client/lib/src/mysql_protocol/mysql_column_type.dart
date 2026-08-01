@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import '../exception.dart';
@@ -38,40 +39,72 @@ extension type const MySQLColumnType(int _) implements int {
   static const stringType = MySQLColumnType(0xfe);
   static const geometryType = MySQLColumnType(0xff);
 
-  T? convertStringValueToProvidedType<T>(String? value, [int? columnLength]) {
+  T? convertStringValueToProvidedType<T>(Object? value, [int? columnLength]) {
     if (value == null) {
       return null;
     }
 
+    if (this == MySQLColumnType.bitType && value is Uint8List) {
+      if (value is T) return value as T;
+      if (T == bool) {
+        return (value.isNotEmpty && value.any((b) => b > 0)) as T;
+      }
+      if (T == int || T == num) {
+        var val = 0;
+        for (final b in value) {
+          val = (val << 8) | b;
+        }
+        return val as T;
+      }
+      if (T == BigInt) {
+        var val = BigInt.zero;
+        for (final b in value) {
+          val = (val << 8) | BigInt.from(b);
+        }
+        return val as T;
+      }
+      throw MySQLProtocolException(
+        'Can not convert MySQL type $this to requested type ${T.runtimeType}',
+      );
+    }
+
+    if (value is! String || this == MySQLColumnType.jsonType) {
+      if (value is T) return value as T;
+      throw MySQLProtocolException(
+        'Can not convert MySQL type $this to requested type ${T.runtimeType}',
+      );
+    }
+
+    final strValue = value;
     return switch (T) {
-      const (String) || const (dynamic) => value as T,
+      const (String) || const (dynamic) || const (Object) => strValue as T,
       const (bool) =>
         (this == MySQLColumnType.tinyType && columnLength == 1)
-            ? int.parse(value) > 0 as T
+            ? int.parse(strValue) > 0 as T
             : throw MySQLProtocolException(
                 'Can not convert MySQL type $this to requested type bool',
               ),
       const (int) =>
         isInteger
-            ? int.parse(value) as T
+            ? int.parse(strValue) as T
             : throw MySQLProtocolException(
                 'Can not convert MySQL type $this to requested type int',
               ),
       const (double) =>
         isNumeric
-            ? double.parse(value) as T
+            ? double.parse(strValue) as T
             : throw MySQLProtocolException(
                 'Can not convert MySQL type $this to requested type double',
               ),
       const (num) =>
         isNumeric
-            ? num.parse(value) as T
+            ? num.parse(strValue) as T
             : throw MySQLProtocolException(
                 'Can not convert MySQL type $this to requested type num',
               ),
       const (DateTime) =>
         isDateTime
-            ? DateTime.parse(value) as T
+            ? DateTime.parse(strValue) as T
             : throw MySQLProtocolException(
                 'Can not convert MySQL type $this to requested type DateTime',
               ),
@@ -87,15 +120,15 @@ extension type const MySQLColumnType(int _) implements int {
     _ when isInteger => int,
     _ when isFloatingPoint => double,
     _ when isDateTime => DateTime,
+    MySQLColumnType.jsonType => Object,
+    MySQLColumnType.bitType => Uint8List,
     _ => String,
   };
 
   bool isBinary(int charset) {
-    return charset == 63 &&
-        (isBlob ||
-            isString ||
-            this == MySQLColumnType.geometryType ||
-            this == MySQLColumnType.bitType);
+    return this == MySQLColumnType.bitType ||
+        (charset == 63 &&
+            (isBlob || isString || this == MySQLColumnType.geometryType));
   }
 
   bool get isInteger => switch (this) {
@@ -290,7 +323,11 @@ extension type const MySQLColumnType(int _) implements int {
     case MySQLColumnType.newDecimalType:
     case MySQLColumnType.jsonType:
       final type = MySQLColumnType(columnType);
-      if (type.isBinary(charset)) {
+      if (type == MySQLColumnType.jsonType) {
+        final (val, len) = buffer.getUtf8LengthEncodedString(startOffset);
+        return (jsonDecode(val), len);
+      }
+      if (type == MySQLColumnType.bitType || type.isBinary(charset)) {
         return buffer.getLengthEncodedBytes(startOffset);
       }
       return buffer.getUtf8LengthEncodedString(startOffset);

@@ -271,7 +271,7 @@ create table book
     check(row.colAt(2)).equals('New book');
     check(row.colAt(3)).equals('100');
     check(row.colAt(4)).equals('2020-01-01 01:00:15');
-    check(row.colAt(5)).isNotNull().startsWith('01:15:25');
+    check(row.colAt(5)).isA<String>().startsWith('01:15:25');
     check(row.typedColAt<int>(0)).equals(transactionBookId);
     check(row.typedColAt<int>(3)).equals(100);
     check(row.typedColAt<num>(3)).equals(100);
@@ -282,7 +282,7 @@ create table book
     check(row.colByName('title')).equals('New book');
     check(row.colByName('price')).equals('100');
     check(row.colByName('created_at')).equals('2020-01-01 01:00:15');
-    check(row.colByName('some_time')).isNotNull().startsWith('01:15:25');
+    check(row.colByName('some_time')).isA<String>().startsWith('01:15:25');
   });
 
   test('testing double transaction', () async {
@@ -409,7 +409,9 @@ create table book
   test('testing prepared stmt select JSON', () async {
     final stmt = await conn.prepare('SELECT CAST(? AS JSON) as col');
     final result = await stmt.execute(['{"key": "val"}']);
-    check(result.rows.first.colByName('col')).equals('{"key": "val"}');
+    check(result.rows.first.colByName('col'))
+        .isA<Map>()
+        .deepEquals({'key': 'val'});
     await stmt.deallocate();
   });
 
@@ -551,10 +553,12 @@ create table book
       check(typedAssoc['col_longtext'].runtimeType).equals(String);
       check(typedAssoc['col_enum'].runtimeType).equals(String);
       check(typedAssoc['col_set'].runtimeType).equals(String);
-      check(typedAssoc['col_json'].runtimeType).equals(String);
+      check(typedAssoc['col_json'])
+          .isA<Map<String, dynamic>>()
+          .deepEquals({'key': 'val'});
       final colJson = row.colByName('col_json');
       check(colJson).isNotNull();
-      check(['{"key": "val"}', '{"key":"val"}']).contains(colJson as String);
+      check(colJson).isA<Map<String, dynamic>>().deepEquals({'key': 'val'});
     }
 
     var groupedResponse = await conn.execute('''
