@@ -1469,20 +1469,21 @@ class ResultSetRow {
   }
 
   /// Get column data by column index (starting form 0)
-  String? colAt(int colIndex) {
+  dynamic colAt(int colIndex) {
     if (colIndex < 0 || colIndex >= _values.length) {
       throw const MySQLClientException('Column index is out of range');
     }
 
     final value = _values[colIndex];
     if (value == null) return null;
-    if (value is Uint8List) {
+    if (value is Uint8List &&
+        _colDefs[colIndex].type != MySQLColumnType.bitType) {
       throw const MySQLClientException(
         'Column is binary (BLOB); use colBytesAt instead',
       );
     }
 
-    return value as String;
+    return value;
   }
 
   /// Same as [colAt] but performs conversion of string data, into provided type [T], if possible
@@ -1534,7 +1535,7 @@ class ResultSetRow {
   }
 
   /// Get column data by column name
-  String? colByName(String columnName) {
+  dynamic colByName(String columnName) {
     final colIndex = _colDefs.indexWhere(
       (element) => element.name.toLowerCase() == columnName.toLowerCase(),
     );
@@ -1549,13 +1550,14 @@ class ResultSetRow {
 
     final value = _values[colIndex];
     if (value == null) return null;
-    if (value is Uint8List) {
+    if (value is Uint8List &&
+        _colDefs[colIndex].type != MySQLColumnType.bitType) {
       throw const MySQLClientException(
         'Column is binary (BLOB); use colBytesAt instead',
       );
     }
 
-    return value as String;
+    return value;
   }
 
   /// Same as [colByName] but performs conversion of string data, into provided type [T], if possible
@@ -1599,19 +1601,19 @@ class ResultSetRow {
   }
 
   /// Get data for all columns
-  Map<String, String?> assoc() {
-    final result = <String, String?>{};
+  Map<String, dynamic> assoc() {
+    final result = <String, dynamic>{};
 
     var colIndex = 0;
 
     for (final colDef in _colDefs) {
       final val = _values[colIndex];
-      if (val is Uint8List) {
+      if (val is Uint8List && colDef.type != MySQLColumnType.bitType) {
         throw const MySQLClientException(
           'Column is binary (BLOB); use colBytesAt instead',
         );
       }
-      result[colDef.name] = val as String?;
+      result[colDef.name] = val;
       colIndex++;
     }
 

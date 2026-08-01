@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:checks/checks.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:test/scaffolding.dart';
@@ -333,14 +335,29 @@ void main() {
 
   test('testing json type', () {
     final sqlType = MySQLColumnType.jsonType;
-    check(sqlType.getBestMatchDartType(0)).equals(String);
+    check(sqlType.getBestMatchDartType(0)).equals(Object);
 
     check(sqlType.convertStringValueToProvidedType<String>('{"key": "value"}'))
         .equals('{"key": "value"}');
 
+    final mapValue = <String, dynamic>{'key': 'value'};
+    check(sqlType.convertStringValueToProvidedType<Map>(mapValue))
+        .equals(mapValue);
+
     check(
       () => sqlType.convertStringValueToProvidedType<int>('{"key": "value"}'),
     ).throws<Exception>();
+  });
+
+  test('testing bit type', () {
+    final sqlType = MySQLColumnType.bitType;
+    check(sqlType.getBestMatchDartType(0)).equals(Uint8List);
+    check(sqlType.isBinary(63)).isTrue();
+    check(sqlType.isBinary(0)).isTrue();
+
+    final bytes = Uint8List.fromList([1, 0, 1]);
+    check(sqlType.convertStringValueToProvidedType<Uint8List>(bytes))
+        .equals(bytes);
   });
 
   test('testing other datetime types and invalid DateTime conversion', () {
