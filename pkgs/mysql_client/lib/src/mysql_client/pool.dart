@@ -16,6 +16,9 @@ class MySQLConnectionPool {
   final bool Function(X509Certificate)? onBadCertificate;
   final String collation;
   final int timeoutMs;
+  final bool serverPublicKeyRetrieval;
+  final String? rsaPublicKey;
+  String? _cachedRsaPublicKey;
 
   final List<MySQLConnection> _activeConnections = [];
   final List<MySQLConnection> _idleConnections = [];
@@ -44,6 +47,8 @@ class MySQLConnectionPool {
     this.onBadCertificate,
     this.collation = 'utf8_general_ci',
     this.timeoutMs = 10000,
+    this.serverPublicKeyRetrieval = false,
+    this.rsaPublicKey,
   });
 
   /// Number of active connections in this pool
@@ -152,9 +157,12 @@ class MySQLConnectionPool {
           securityContext: securityContext,
           onBadCertificate: onBadCertificate,
           collation: collation,
+          serverPublicKeyRetrieval: serverPublicKeyRetrieval,
+          rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
         );
 
         await conn.connect(timeoutMs: timeoutMs);
+        _cachedRsaPublicKey ??= conn.rsaPublicKey;
         if (_closed) {
           await conn.close();
           throw const MySQLClientException('Connection pool has been closed');
@@ -214,9 +222,12 @@ class MySQLConnectionPool {
         securityContext: securityContext,
         onBadCertificate: onBadCertificate,
         collation: collation,
+        serverPublicKeyRetrieval: serverPublicKeyRetrieval,
+        rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
       );
 
       await conn.connect(timeoutMs: timeoutMs);
+      _cachedRsaPublicKey ??= conn.rsaPublicKey;
       if (_closed) {
         await conn.close();
         completer.completeError(

@@ -786,5 +786,19 @@ void main() {
       final (str, _) = encoded.getUtf8LengthEncodedString(14);
       check(str).equals('2026-06-10 14:30:00.000');
     });
+
+    test('testing MySQLPacketExtraAuthDataResponse appendNullByte control', () {
+      final data = Uint8List.fromList([1, 2, 3]);
+      final withNull = MySQLPacketExtraAuthDataResponse(data: data).encode();
+      check(withNull.length).equals(4);
+      check(withNull[3]).equals(0);
+
+      final withoutNull = MySQLPacketExtraAuthDataResponse(
+        data: data,
+        appendNullByte: false,
+      ).encode();
+      check(withoutNull.length).equals(3);
+      check(withoutNull[2]).equals(3);
+    });
   });
 }

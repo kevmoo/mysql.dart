@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import '../exception.dart';
 import '../mysql_protocol/mysql_protocol.dart';
+import 'caching_sha2_auth.dart' as caching_sha2_auth;
 
 enum _MySQLConnectionState {
   fresh,
@@ -50,6 +51,9 @@ class MySQLConnection {
   final SecurityContext? _securityContext;
   final bool Function(X509Certificate)? _onBadCertificate;
   final Object? _host;
+  final bool _serverPublicKeyRetrieval;
+  String? _rsaPublicKey;
+  Uint8List _scramble = Uint8List(0);
   final List<int> _incompleteBufferData = [];
   Object? _lastError;
   int _serverCapabilities = 0;
@@ -68,6 +72,8 @@ class MySQLConnection {
     this._secure = true,
     this._securityContext,
     this._onBadCertificate,
+    this._serverPublicKeyRetrieval = false,
+    this._rsaPublicKey,
     this._databaseName,
   });
 
@@ -103,6 +109,8 @@ class MySQLConnection {
     bool Function(X509Certificate)? onBadCertificate,
     String? databaseName,
     String collation = 'utf8mb4_general_ci',
+    bool serverPublicKeyRetrieval = false,
+    String? rsaPublicKey,
   }) async {
     final socket = await Socket.connect(host, port);
 
@@ -121,6 +129,8 @@ class MySQLConnection {
       securityContext: securityContext,
       onBadCertificate: onBadCertificate,
       collation: collation,
+      serverPublicKeyRetrieval: serverPublicKeyRetrieval,
+      rsaPublicKey: rsaPublicKey,
     );
 
     return client;
@@ -130,6 +140,9 @@ class MySQLConnection {
   bool get connected {
     return _connected;
   }
+
+  /// Returns the server RSA public key used or retrieved by this connection
+  String? get rsaPublicKey => _rsaPublicKey;
 
   /// Registers callack to be executed when this connection is closed
   void onClose(void Function() callback) {
@@ -186,6 +199,31 @@ class MySQLConnection {
     );
   }
 
+  void _sendEncryptedPassword(int sequenceID) {
+    if (_rsaPublicKey == null) {
+      throw MySQLClientException(
+        'Missing RSA Public Key for $_activeAuthPluginName',
+      );
+    }
+    final key = caching_sha2_auth.parsePemPublicKey(_rsaPublicKey!);
+    final encryptedPassword = caching_sha2_auth.encryptPassword(
+      _password,
+      _scramble,
+      key,
+    );
+
+    final authExtraDataResponse = MySQLPacket(
+      sequenceID: sequenceID,
+      payload: MySQLPacketExtraAuthDataResponse(
+        data: encryptedPassword,
+        appendNullByte: false,
+      ),
+      payloadLength: 0,
+    );
+
+    _socket.add(authExtraDataResponse.encode());
+  }
+
   void _handleSocketClose() {
     _connected = false;
     _socket.destroy();
@@ -218,6 +256,11 @@ class MySQLConnection {
             authSwitchPacket.payload as MySQLPacketAuthSwitchRequest;
 
         _activeAuthPluginName = payload.authPluginName;
+        if (payload.authPluginData.length >= 20) {
+          _scramble = Uint8List.fromList(payload.authPluginData.sublist(0, 20));
+        } else {
+          _scramble = Uint8List.fromList(payload.authPluginData);
+        }
 
         final responsePayload = switch (payload.authPluginName) {
           'mysql_native_password' =>
@@ -265,20 +308,59 @@ class MySQLConnection {
           );
         }
 
-        if (!_isTransportSecure) {
+        if (!_isTransportSecure &&
+            _activeAuthPluginName != 'caching_sha2_password') {
           throw MySQLClientException(
             'Auth plugin $_activeAuthPluginName is supported only with secure connections. Pass secure: true or use another auth method',
           );
         }
 
         final payload = packet.payload as MySQLPacketExtraAuthData;
-        final status = payload.pluginData.codeUnitAt(0);
+        final isAuthMoreData =
+            payload.header == 1; // 0x01 indicates auth more data
+        final pluginDataStr = payload.pluginData;
+        final status = isAuthMoreData && pluginDataStr.isNotEmpty
+            ? pluginDataStr.codeUnitAt(0)
+            : -1;
+
+        if (isAuthMoreData &&
+            pluginDataStr.contains('-----BEGIN PUBLIC KEY-----')) {
+          _rsaPublicKey = pluginDataStr;
+          _sendEncryptedPassword(packet.sequenceID + 1);
+          return;
+        }
 
         if (status == 3) {
           // server has password cache. just ignore
           return;
         } else if (status == 4) {
-          // send password to the server
+          if (!_isTransportSecure) {
+            if (_activeAuthPluginName == 'caching_sha2_password') {
+              if (_rsaPublicKey == null && !_serverPublicKeyRetrieval) {
+                throw MySQLClientException(
+                  'Auth plugin $_activeAuthPluginName over insecure connection requires serverPublicKeyRetrieval: true or a pinned rsaPublicKey',
+                );
+              }
+              if (_rsaPublicKey == null) {
+                // Request server public key (0x02)
+                final requestKeyPacket = MySQLPacket(
+                  sequenceID: packet.sequenceID + 1,
+                  payload: MySQLPacketExtraAuthDataResponse(
+                    data: Uint8List.fromList([0x02]),
+                    appendNullByte: false,
+                  ),
+                  payloadLength: 0,
+                );
+                _socket.add(requestKeyPacket.encode());
+                return;
+              } else {
+                _sendEncryptedPassword(packet.sequenceID + 1);
+                return;
+              }
+            }
+          }
+
+          // send password to the server in plain text
           final authExtraDataResponse = MySQLPacket(
             sequenceID: packet.sequenceID + 1,
             payload: MySQLPacketExtraAuthDataResponse(
@@ -425,6 +507,15 @@ class MySQLConnection {
 
     final authPluginName = payload.authPluginName;
     _activeAuthPluginName = authPluginName;
+    if (payload.authPluginDataPart2 != null &&
+        payload.authPluginDataPart2!.length >= 12) {
+      _scramble = Uint8List.fromList(
+        payload.authPluginDataPart1 +
+            payload.authPluginDataPart2!.sublist(0, 12),
+      );
+    } else {
+      _scramble = payload.authPluginDataPart1;
+    }
 
     final responsePayload = switch (authPluginName) {
       'mysql_native_password' =>
