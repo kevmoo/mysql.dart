@@ -13,6 +13,8 @@ class MySQLConnectionPool {
   final bool secure;
   final String collation;
   final int timeoutMs;
+  final bool serverPublicKeyRetrieval;
+  final String? rsaPublicKey;
 
   final List<MySQLConnection> _activeConnections = [];
   final List<MySQLConnection> _idleConnections = [];
@@ -35,6 +37,8 @@ class MySQLConnectionPool {
     this.secure = true,
     this.collation = 'utf8_general_ci',
     this.timeoutMs = 10000,
+    this.serverPublicKeyRetrieval = false,
+    this.rsaPublicKey,
   });
 
   /// Number of active connections in this pool
@@ -141,6 +145,8 @@ class MySQLConnectionPool {
           databaseName: databaseName,
           secure: secure,
           collation: collation,
+          serverPublicKeyRetrieval: serverPublicKeyRetrieval,
+          rsaPublicKey: rsaPublicKey,
         );
 
         await conn.connect(timeoutMs: timeoutMs);
