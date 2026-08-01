@@ -1,6 +1,24 @@
 import 'dart:async';
 import 'dart:io';
 
+String? _cachedEngine;
+String get containerEngine {
+  if (_cachedEngine != null) return _cachedEngine!;
+  final envEngine = Platform.environment['CONTAINER_ENGINE'];
+  if (envEngine != null && envEngine.isNotEmpty) {
+    return _cachedEngine = envEngine;
+  }
+  for (final candidate in ['podman', 'docker']) {
+    try {
+      final res = Process.runSync(candidate, const ['--version']);
+      if (res.exitCode == 0) {
+        return _cachedEngine = candidate;
+      }
+    } catch (_) {}
+  }
+  return _cachedEngine = 'podman';
+}
+
 class DbContainer {
   final String containerName;
   final String image;
@@ -97,8 +115,10 @@ class DbContainer {
       image,
     ];
 
-    stdout.writeln('Starting container $containerName with image $image...');
-    var runResult = await Process.run('podman', runArgs);
+    stdout.writeln(
+      'Starting container $containerName with image $image using $containerEngine...',
+    );
+    var runResult = await Process.run(containerEngine, runArgs);
     for (
       var attempt = 1;
       attempt <= 10 &&
@@ -117,11 +137,11 @@ class DbContainer {
       if (mountSocket) {
         await Directory('.tmp_mysql').create(recursive: true);
       }
-      runResult = await Process.run('podman', runArgs);
+      runResult = await Process.run(containerEngine, runArgs);
     }
     if (runResult.exitCode != 0) {
       throw ProcessException(
-        'podman',
+        containerEngine,
         runArgs,
         'Failed to start container: ${runResult.stderr}',
         runResult.exitCode,
@@ -133,7 +153,7 @@ class DbContainer {
       stdout.writeln('Waiting for database to start...');
       var ready = false;
       for (var i = 1; i <= 60; i++) {
-        final checkResult = await Process.run('podman', [
+        final checkResult = await Process.run(containerEngine, [
           'exec',
           containerName,
           ...readinessCommand,
@@ -164,16 +184,16 @@ class DbContainer {
       // 6. Setup commands (e.g. SQL statements)
       for (final cmd in setupCommands) {
         stdout.writeln(
-          'Running setup command: podman exec $containerName ${cmd.join(' ')}',
+          'Running setup command: $containerEngine exec $containerName ${cmd.join(' ')}',
         );
-        final setupResult = await Process.run('podman', [
+        final setupResult = await Process.run(containerEngine, [
           'exec',
           containerName,
           ...cmd,
         ]);
         if (setupResult.exitCode != 0) {
           throw ProcessException(
-            'podman',
+            containerEngine,
             ['exec', containerName, ...cmd],
             'Setup command failed: ${setupResult.stderr}',
             setupResult.exitCode,
@@ -191,13 +211,17 @@ class DbContainer {
 
   Future<void> _cleanup() async {
     stdout.writeln('Stopping and removing container $containerName...');
-    await Process.run('podman', ['rm', '-f', containerName]);
+    await Process.run(containerEngine, ['rm', '-f', containerName]);
     if (Platform.isLinux) {
       await Process.run('sh', ['-c', 'fuser -k 3306/tcp || true']);
     }
     await Future<void>.delayed(const Duration(seconds: 2));
     if (mountSocket) {
-      await Process.run('podman', ['unshare', 'rm', '-rf', '.tmp_mysql']);
+      if (containerEngine == 'podman') {
+        await Process.run('podman', ['unshare', 'rm', '-rf', '.tmp_mysql']);
+      } else {
+        await Process.run('rm', ['-rf', '.tmp_mysql']);
+      }
       final link = Link('/tmp/mysql.sock');
       if (await link.exists()) {
         await link.delete();
@@ -207,7 +231,10 @@ class DbContainer {
 
   Future<void> _printLogs() async {
     stdout.writeln('=== Container $containerName Logs ===');
-    final logsResult = await Process.run('podman', ['logs', containerName]);
+    final logsResult = await Process.run(containerEngine, [
+      'logs',
+      containerName,
+    ]);
     stdout.write(logsResult.stdout);
     stderr.write(logsResult.stderr);
     stdout.writeln('==============================');
