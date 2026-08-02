@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:mysql_client/mysql_client.dart';
+import '../../mysql_client.dart';
 
 /// Class to create and manage pool of database connections
 class MySQLConnectionPool {
@@ -177,7 +177,7 @@ class MySQLConnectionPool {
 
     final completer = Completer<_PooledConnection>();
     _pendingRequests.add(completer);
-    _processPendingRequests();
+    unawaited(_processPendingRequests());
     return completer.future;
   }
 
@@ -199,7 +199,7 @@ class MySQLConnectionPool {
                 await pConn.connection.execute('SELECT 1');
               } catch (_) {
                 // Evict the stale connection
-                pConn.connection.close(); // Fire and forget
+                unawaited(pConn.connection.close()); // Fire and forget
                 continue;
               }
             }
@@ -214,7 +214,7 @@ class MySQLConnectionPool {
           }
         } else if (allConnectionsQty < maxConnections) {
           final completer = _pendingRequests.removeAt(0);
-          _createNewConnectionForCompleter(completer);
+          unawaited(_createNewConnectionForCompleter(completer));
           // Loop continues so we can spawn multiples concurrently if there are more pending requests
         } else {
           break;
@@ -265,7 +265,7 @@ class MySQLConnectionPool {
       conn.onClose(() {
         _idleConnections.remove(pConn);
         _activeConnections.remove(pConn);
-        _processPendingRequests();
+        unawaited(_processPendingRequests());
       });
 
       completer.complete(pConn);
@@ -273,14 +273,14 @@ class MySQLConnectionPool {
       completer.completeError(e, st);
     } finally {
       _connectingCount--;
-      _processPendingRequests();
+      unawaited(_processPendingRequests());
     }
   }
 
   void _releaseConnection(_PooledConnection pConn) {
     _activeConnections.remove(pConn);
 
-    bool evict = false;
+    var evict = false;
     final now = DateTime.now();
     if (now.difference(pConn.openedAt) >= maxConnectionAge) {
       evict = true;
@@ -293,10 +293,12 @@ class MySQLConnectionPool {
     if (pConn.connection.connected && !evict) {
       _idleConnections.add(pConn);
     } else {
-      pConn.connection.close(); // Evict based on threshold or already closed
+      unawaited(
+        pConn.connection.close(),
+      ); // Evict based on threshold or already closed
     }
 
-    _processPendingRequests();
+    unawaited(_processPendingRequests());
   }
 }
 
