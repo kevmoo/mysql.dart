@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:mysql_client/mysql_client.dart';
 import 'package:test/test.dart';
@@ -13,6 +14,7 @@ class MockMySQLConnection implements MySQLConnection {
   bool closed = false;
   int executeCount = 0;
   bool shouldThrowOnPing = false;
+  Duration? pingDelay;
 
   void Function()? _onCloseCallback;
 
@@ -23,6 +25,9 @@ class MockMySQLConnection implements MySQLConnection {
 
   @override
   Future<void> close() async {
+    if (closed) {
+      throw const MySQLClientException('Connection already closed');
+    }
     closed = true;
     connected = false;
     if (_onCloseCallback != null) {
@@ -42,11 +47,22 @@ class MockMySQLConnection implements MySQLConnection {
     bool iterable = false,
   ]) async {
     executeCount++;
-    if (query == 'SELECT 1' && shouldThrowOnPing) {
-      throw const MySQLClientException('Ping failed');
+    if (query == 'SELECT 1') {
+      if (pingDelay != null) {
+        await Future<void>.delayed(pingDelay!);
+      }
+      if (shouldThrowOnPing) {
+        throw const MySQLClientException('Ping failed');
+      }
     }
     if (query == 'THROW_ON_PURPOSE') {
       throw const MySQLClientException('Query failed');
+    }
+    if (query == 'THROW_SERVER_ERROR') {
+      throw const MySQLServerException('Duplicate entry', 1062);
+    }
+    if (query == 'THROW_SOCKET_ERROR') {
+      throw const SocketException('Connection reset by peer');
     }
     return EmptyResultSet();
   }
@@ -146,34 +162,37 @@ void main() {
       expect(mockConns.length, 2);
     });
 
-    test('Evicts connection exceeding maxErrorCount', () async {
-      final mockConns = <MockMySQLConnection>[];
-      final pool = MySQLConnectionPool(
-        host: 'localhost',
-        port: 3306,
-        userName: 'u',
-        password: 'p',
-        maxConnections: 1,
-        maxErrorCount: 2,
-        connectionFactory: () async {
-          final conn = MockMySQLConnection();
-          mockConns.add(conn);
-          return conn;
-        },
-      );
+    test(
+      'Evicts connection exceeding maxErrorCount on protocol errors',
+      () async {
+        final mockConns = <MockMySQLConnection>[];
+        final pool = MySQLConnectionPool(
+          host: 'localhost',
+          port: 3306,
+          userName: 'u',
+          password: 'p',
+          maxConnections: 1,
+          maxErrorCount: 2,
+          connectionFactory: () async {
+            final conn = MockMySQLConnection();
+            mockConns.add(conn);
+            return conn;
+          },
+        );
 
-      try {
-        await pool.execute('THROW_ON_PURPOSE');
-      } catch (_) {}
+        try {
+          await pool.execute('THROW_ON_PURPOSE');
+        } catch (_) {}
 
-      expect(mockConns[0].closed, isFalse);
+        expect(mockConns[0].closed, isFalse);
 
-      try {
-        await pool.execute('THROW_ON_PURPOSE');
-      } catch (_) {}
+        try {
+          await pool.execute('THROW_ON_PURPOSE');
+        } catch (_) {}
 
-      expect(mockConns[0].closed, isTrue);
-    });
+        expect(mockConns[0].closed, isTrue);
+      },
+    );
 
     test(
       'Performs SELECT 1 health ping when idle threshold exceeded',
@@ -238,5 +257,114 @@ void main() {
         expect(mockConns[1].executeCount, 1);
       },
     );
+
+    test('Does not evict on MySQLServerException or domain errors, only on transport degradation', () async {
+      final mockConns = <MockMySQLConnection>[];
+      final pool = MySQLConnectionPool(
+        host: 'localhost',
+        port: 3306,
+        userName: 'u',
+        password: 'p',
+        maxConnections: 1,
+        maxErrorCount: 2,
+        connectionFactory: () async {
+          final conn = MockMySQLConnection();
+          mockConns.add(conn);
+          return conn;
+        },
+      );
+
+      // Execute multiple domain SQL errors (more than maxErrorCount)
+      for (var i = 0; i < 5; i++) {
+        try {
+          await pool.execute('THROW_SERVER_ERROR');
+        } catch (_) {}
+        try {
+          await pool.withConnection(
+            (conn) => throw const FormatException('Domain error'),
+          );
+        } catch (_) {}
+      }
+
+      expect(mockConns[0].closed, isFalse);
+
+      // Now throw transport exceptions
+      try {
+        await pool.execute('THROW_SOCKET_ERROR');
+      } catch (_) {}
+      try {
+        await pool.execute('THROW_SOCKET_ERROR');
+      } catch (_) {}
+
+      expect(mockConns[0].closed, isTrue);
+    });
+
+    test('Processes concurrent pool requests without blocking behind slow idle health pings', () async {
+      final mockConns = <MockMySQLConnection>[];
+      final pool = MySQLConnectionPool(
+        host: 'localhost',
+        port: 3306,
+        userName: 'u',
+        password: 'p',
+        maxConnections: 2,
+        idleTestThreshold: const Duration(milliseconds: 10),
+        connectionFactory: () async {
+          final conn = MockMySQLConnection();
+          mockConns.add(conn);
+          return conn;
+        },
+      );
+
+      await pool.execute('SELECT 2');
+      final firstConn = mockConns[0];
+      firstConn.pingDelay = const Duration(milliseconds: 100);
+
+      await Future<void>.delayed(const Duration(milliseconds: 15));
+
+      // Trigger request on idle connection (will pause 100ms in ping)
+      final future1 = pool.execute('SELECT 2');
+      // Trigger concurrent request immediately; should not block waiting for first ping!
+      final future2 = pool.execute('SELECT 3');
+
+      await Future.wait([future1, future2]);
+
+      expect(mockConns.length, 2);
+      expect(mockConns[0].closed, isFalse);
+      expect(mockConns[1].closed, isFalse);
+    });
+
+    test('Safely cleans up connections in limbo if pool is closed during an async health ping', () async {
+      final mockConns = <MockMySQLConnection>[];
+      final pool = MySQLConnectionPool(
+        host: 'localhost',
+        port: 3306,
+        userName: 'u',
+        password: 'p',
+        maxConnections: 1,
+        idleTestThreshold: const Duration(milliseconds: 10),
+        connectionFactory: () async {
+          final conn = MockMySQLConnection();
+          mockConns.add(conn);
+          return conn;
+        },
+      );
+
+      await pool.execute('SELECT 2');
+      final firstConn = mockConns[0];
+      firstConn.pingDelay = const Duration(milliseconds: 80);
+
+      await Future<void>.delayed(const Duration(milliseconds: 15));
+
+      // Trigger async idle ping
+      final execFuture = pool.execute('SELECT 2');
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      // Close pool while firstConn is in limbo awaiting SELECT 1
+      await pool.close();
+
+      await expectLater(execFuture, throwsA(isA<MySQLClientException>()));
+      expect(firstConn.closed, isTrue);
+      expect(pool.allConnectionsQty, 0);
+    });
   });
 }
