@@ -50,7 +50,7 @@ class MySQLConnection {
     }
   }
 
-  final _deferredStmtCloseIds = LinkedHashSet<int>();
+  final Set<int> _deferredStmtCloseIds = <int>{};
 
   void _flushDeferredStmtCloses() {
     if (_deferredStmtCloseIds.isEmpty) {
