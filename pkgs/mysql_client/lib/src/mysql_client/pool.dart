@@ -20,11 +20,28 @@ class MySQLConnectionPool {
   final String? rsaPublicKey;
   String? _cachedRsaPublicKey;
 
-  final List<MySQLConnection> _activeConnections = [];
-  final List<MySQLConnection> _idleConnections = [];
-  final List<Completer<MySQLConnection>> _pendingRequests = [];
+  /// Time after which an idle connection is pinged before reuse
+  final Duration idleTestThreshold;
+
+  /// Maximum age of a connection before it is evicted
+  final Duration maxConnectionAge;
+
+  /// Maximum cumulative time a connection can be borrowed before eviction
+  final Duration maxSessionUse;
+
+  /// Maximum number of errors allowed before a connection is evicted
+  final int maxErrorCount;
+
+  /// Optional factory for creating connections, mainly for testing
+  final Future<MySQLConnection> Function()? connectionFactory;
+
+  final Set<_PooledConnection> _allPoolConnections = {};
+  final List<_PooledConnection> _activeConnections = [];
+  final List<_PooledConnection> _idleConnections = [];
+  final List<Completer<_PooledConnection>> _pendingRequests = [];
   int _connectingCount = 0;
   bool _closed = false;
+  bool _isProcessingPending = false;
 
   /// Creates new pool
   ///
@@ -49,6 +66,11 @@ class MySQLConnectionPool {
     this.timeoutMs = 10000,
     this.serverPublicKeyRetrieval = false,
     this.rsaPublicKey,
+    this.idleTestThreshold = const Duration(seconds: 60),
+    this.maxConnectionAge = const Duration(hours: 12),
+    this.maxSessionUse = const Duration(hours: 8),
+    this.maxErrorCount = 64,
+    this.connectionFactory,
   });
 
   /// Number of active connections in this pool
@@ -59,24 +81,26 @@ class MySQLConnectionPool {
   /// Idle are connections which are currently not interacting with the database and ready to be used
   int get idleConnectionsQty => _idleConnections.length;
 
-  /// Active + Idle + Connecting connections
-  int get allConnectionsQty =>
-      _activeConnections.length + _idleConnections.length + _connectingCount;
-
-  List<MySQLConnection> get _allConnections =>
-      _idleConnections + _activeConnections;
+  /// Active + Idle + Connecting connections (including connections under idle health verification)
+  int get allConnectionsQty => _allPoolConnections.length + _connectingCount;
 
   /// See [MySQLConnection.execute]
   Future<IResultSet> execute(
     String query, [
-    Map<String, dynamic>? params,
+    Map<String, Object?>? params,
     bool iterable = false,
   ]) async {
-    final conn = await _getFreeConnection();
+    final pConn = await _getFreePooledConnection();
+    final borrowStart = DateTime.now();
     try {
-      return await conn.execute(query, params, iterable);
+      return await pConn.connection.execute(query, params, iterable);
+    } catch (e) {
+      _recordErrorIfDegraded(pConn, e);
+      rethrow;
     } finally {
-      _releaseConnection(conn);
+      pConn.totalBorrowDuration += DateTime.now().difference(borrowStart);
+      pConn.lastUsed = DateTime.now();
+      _releaseConnection(pConn);
     }
   }
 
@@ -84,26 +108,39 @@ class MySQLConnectionPool {
   Future<void> close() async {
     _closed = true;
     for (final completer in _pendingRequests) {
-      completer.completeError(
-        const MySQLClientException('Connection pool has been closed'),
-      );
+      if (!completer.isCompleted) {
+        completer.completeError(
+          const MySQLClientException('Connection pool has been closed'),
+        );
+      }
     }
     _pendingRequests.clear();
 
-    for (final conn in _allConnections) {
-      await conn.close();
+    for (final pConn in _allPoolConnections.toList()) {
+      try {
+        if (pConn.connection.connected) {
+          await pConn.connection.close().catchError((_) {});
+        }
+      } catch (_) {}
     }
+    _allPoolConnections.clear();
     _idleConnections.clear();
     _activeConnections.clear();
   }
 
   /// See [MySQLConnection.prepare]
   Future<PreparedStmt> prepare(String query, [bool iterable = false]) async {
-    final conn = await _getFreeConnection();
+    final pConn = await _getFreePooledConnection();
+    final borrowStart = DateTime.now();
     try {
-      return await conn.prepare(query, iterable);
+      return await pConn.connection.prepare(query, iterable);
+    } catch (e) {
+      _recordErrorIfDegraded(pConn, e);
+      rethrow;
     } finally {
-      _releaseConnection(conn);
+      pConn.totalBorrowDuration += DateTime.now().difference(borrowStart);
+      pConn.lastUsed = DateTime.now();
+      _releaseConnection(pConn);
     }
   }
 
@@ -114,11 +151,17 @@ class MySQLConnectionPool {
   Future<T> withConnection<T>(
     FutureOr<T> Function(MySQLConnection conn) callback,
   ) async {
-    final conn = await _getFreeConnection();
+    final pConn = await _getFreePooledConnection();
+    final borrowStart = DateTime.now();
     try {
-      return await callback(conn);
+      return await callback(pConn.connection);
+    } catch (e) {
+      _recordErrorIfDegraded(pConn, e);
+      rethrow;
     } finally {
-      _releaseConnection(conn);
+      pConn.totalBorrowDuration += DateTime.now().difference(borrowStart);
+      pConn.lastUsed = DateTime.now();
+      _releaseConnection(pConn);
     }
   }
 
@@ -131,133 +174,202 @@ class MySQLConnectionPool {
     });
   }
 
-  Future<MySQLConnection> _getFreeConnection() async {
+  Future<_PooledConnection> _getFreePooledConnection() async {
     if (_closed) {
       throw const MySQLClientException('Connection pool has been closed');
     }
 
-    // if there is idle connection, return it
-    if (_idleConnections.isNotEmpty) {
-      final conn = _idleConnections.first;
-      _idleConnections.remove(conn);
-      _activeConnections.add(conn);
-      return conn;
-    }
+    final completer = Completer<_PooledConnection>();
+    _pendingRequests.add(completer);
+    unawaited(_processPendingRequests());
+    return completer.future;
+  }
 
-    if (allConnectionsQty < maxConnections) {
-      _connectingCount++;
-      try {
-        final conn = await MySQLConnection.createConnection(
-          host: host,
-          port: port,
-          userName: userName,
-          password: _password,
-          databaseName: databaseName,
-          secure: secure,
-          securityContext: securityContext,
-          onBadCertificate: onBadCertificate,
-          collation: collation,
-          serverPublicKeyRetrieval: serverPublicKeyRetrieval,
-          rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
-        );
+  Future<void> _processPendingRequests() async {
+    if (_isProcessingPending) return;
+    _isProcessingPending = true;
 
-        await conn.connect(timeoutMs: timeoutMs);
-        _cachedRsaPublicKey ??= conn.rsaPublicKey;
-        if (_closed) {
-          await conn.close();
-          throw const MySQLClientException('Connection pool has been closed');
+    try {
+      while (_pendingRequests.isNotEmpty) {
+        if (_idleConnections.isNotEmpty) {
+          final pConn = _idleConnections.removeAt(0);
+
+          if (idleTestThreshold != Duration.zero) {
+            final now = DateTime.now();
+            if (now.difference(pConn.lastUsed) >= idleTestThreshold) {
+              final completer = _pendingRequests.removeAt(0);
+              unawaited(_verifyAndAssignIdleConnection(pConn, completer));
+              continue;
+            }
+          }
+
+          final completer = _pendingRequests.removeAt(0);
+          _activeConnections.add(pConn);
+          if (!completer.isCompleted) {
+            completer.complete(pConn);
+          }
+        } else if (allConnectionsQty < maxConnections) {
+          final completer = _pendingRequests.removeAt(0);
+          unawaited(_createNewConnectionForCompleter(completer));
+          // Loop continues so we can spawn multiples concurrently if there are more pending requests
+        } else {
+          break;
         }
-        _activeConnections.add(conn);
-
-        // remove connection from pool, if connection is closed
-        conn.onClose(() {
-          _idleConnections.remove(conn);
-          _activeConnections.remove(conn);
-          _processPendingRequests();
-        });
-
-        return conn;
-      } finally {
-        _connectingCount--;
-        _processPendingRequests();
       }
-    } else {
-      // wait for idle connection
-      final completer = Completer<MySQLConnection>();
-      _pendingRequests.add(completer);
-      return completer.future;
+    } finally {
+      _isProcessingPending = false;
     }
   }
 
-  void _processPendingRequests() {
-    while (_pendingRequests.isNotEmpty) {
-      if (_idleConnections.isNotEmpty) {
-        final completer = _pendingRequests.removeAt(0);
-        final conn = _idleConnections.first;
-        _idleConnections.remove(conn);
-        _activeConnections.add(conn);
-        completer.complete(conn);
-      } else if (allConnectionsQty < maxConnections) {
-        final completer = _pendingRequests.removeAt(0);
-        _createNewConnectionForCompleter(completer);
-        break;
-      } else {
-        break;
+  Future<void> _verifyAndAssignIdleConnection(
+    _PooledConnection pConn,
+    Completer<_PooledConnection> completer,
+  ) async {
+    try {
+      await pConn.connection.execute('SELECT 1');
+      if (_closed) {
+        _evictConnection(pConn);
+        if (!completer.isCompleted) {
+          completer.completeError(
+            const MySQLClientException('Connection pool has been closed'),
+          );
+        }
+        return;
+      }
+      _activeConnections.add(pConn);
+      if (!completer.isCompleted) {
+        completer.complete(pConn);
+      }
+    } catch (_) {
+      _evictConnection(pConn);
+      if (!_closed && !completer.isCompleted) {
+        _pendingRequests.insert(0, completer);
+        unawaited(_processPendingRequests());
+      } else if (!completer.isCompleted) {
+        completer.completeError(
+          const MySQLClientException('Connection pool has been closed'),
+        );
       }
     }
   }
 
   Future<void> _createNewConnectionForCompleter(
-    Completer<MySQLConnection> completer,
+    Completer<_PooledConnection> completer,
   ) async {
     _connectingCount++;
     try {
-      final conn = await MySQLConnection.createConnection(
-        host: host,
-        port: port,
-        userName: userName,
-        password: _password,
-        databaseName: databaseName,
-        secure: secure,
-        securityContext: securityContext,
-        onBadCertificate: onBadCertificate,
-        collation: collation,
-        serverPublicKeyRetrieval: serverPublicKeyRetrieval,
-        rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
-      );
+      final conn = connectionFactory != null
+          ? await connectionFactory!()
+          : await MySQLConnection.createConnection(
+              host: host,
+              port: port,
+              userName: userName,
+              password: _password,
+              databaseName: databaseName,
+              secure: secure,
+              securityContext: securityContext,
+              onBadCertificate: onBadCertificate,
+              collation: collation,
+              serverPublicKeyRetrieval: serverPublicKeyRetrieval,
+              rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
+            );
 
-      await conn.connect(timeoutMs: timeoutMs);
+      if (connectionFactory == null) {
+        await conn.connect(timeoutMs: timeoutMs);
+      }
       _cachedRsaPublicKey ??= conn.rsaPublicKey;
+
+      final pConn = _PooledConnection(conn);
+
       if (_closed) {
-        await conn.close();
-        completer.completeError(
-          const MySQLClientException('Connection pool has been closed'),
-        );
+        try {
+          if (conn.connected) {
+            await conn.close().catchError((_) {});
+          }
+        } catch (_) {}
+        if (!completer.isCompleted) {
+          completer.completeError(
+            const MySQLClientException('Connection pool has been closed'),
+          );
+        }
         return;
       }
-      _activeConnections.add(conn);
+      _allPoolConnections.add(pConn);
+      _activeConnections.add(pConn);
 
       conn.onClose(() {
-        _idleConnections.remove(conn);
-        _activeConnections.remove(conn);
-        _processPendingRequests();
+        _allPoolConnections.remove(pConn);
+        _idleConnections.remove(pConn);
+        _activeConnections.remove(pConn);
+        unawaited(_processPendingRequests());
       });
 
-      completer.complete(conn);
+      if (!completer.isCompleted) {
+        completer.complete(pConn);
+      }
     } catch (e, st) {
-      completer.completeError(e, st);
+      if (!completer.isCompleted) {
+        completer.completeError(e, st);
+      }
     } finally {
       _connectingCount--;
-      _processPendingRequests();
+      unawaited(_processPendingRequests());
     }
   }
 
-  void _releaseConnection(MySQLConnection conn) {
-    // remove from active
-    _activeConnections.remove(conn);
-    if (conn.connected) {
-      _idleConnections.add(conn);
+  void _releaseConnection(_PooledConnection pConn) {
+    _activeConnections.remove(pConn);
+
+    var evict = false;
+    final now = DateTime.now();
+    if (now.difference(pConn.openedAt) >= maxConnectionAge) {
+      evict = true;
+    } else if (pConn.totalBorrowDuration >= maxSessionUse) {
+      evict = true;
+    } else if (pConn.errorCount >= maxErrorCount) {
+      evict = true;
     }
-    _processPendingRequests();
+
+    if (pConn.connection.connected && !evict) {
+      _idleConnections.add(pConn);
+    } else {
+      _evictConnection(pConn);
+    }
+
+    unawaited(_processPendingRequests());
   }
+
+  void _evictConnection(_PooledConnection pConn) {
+    _allPoolConnections.remove(pConn);
+    _idleConnections.remove(pConn);
+    _activeConnections.remove(pConn);
+    try {
+      if (pConn.connection.connected) {
+        unawaited(pConn.connection.close().catchError((_) {}));
+      }
+    } catch (_) {}
+  }
+
+  void _recordErrorIfDegraded(_PooledConnection pConn, Object error) {
+    if (!pConn.connection.connected ||
+        error is SocketException ||
+        error is TimeoutException ||
+        error is MySQLClientException) {
+      pConn.errorCount++;
+    }
+  }
+}
+
+class _PooledConnection {
+  final MySQLConnection connection;
+  final DateTime openedAt;
+  DateTime lastUsed;
+  Duration totalBorrowDuration;
+  int errorCount;
+
+  _PooledConnection(this.connection)
+    : openedAt = DateTime.now(),
+      lastUsed = DateTime.now(),
+      totalBorrowDuration = Duration.zero,
+      errorCount = 0;
 }
