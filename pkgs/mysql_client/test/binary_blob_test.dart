@@ -41,8 +41,8 @@ void main() {
         // new_params_bound_flag at offset 11
         check(bd.getUint8(11)).equals(1);
 
-        // Param 1 type at offset 12: varStringType (0xFD)
-        check(bd.getUint8(12)).equals(MySQLColumnType.varStringType);
+        // Param 1 type at offset 12: longLongType (0x08)
+        check(bd.getUint8(12)).equals(MySQLColumnType.longLongType);
         check(bd.getUint8(13)).equals(0); // unsigned flag
 
         // Param 2 type at offset 14: blobType (0xFC)

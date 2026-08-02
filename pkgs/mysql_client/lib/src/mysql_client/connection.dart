@@ -980,8 +980,9 @@ class MySQLConnection {
 
   Future<IResultSet> _executePreparedStmt(
     PreparedStmt stmt,
-    List<dynamic> params,
+    List<Object?> params,
     bool iterable,
+    List<MySQLColumnType?>? paramTypes,
   ) async {
     if (!_connected) {
       throw const MySQLClientException(
@@ -1000,6 +1001,7 @@ class MySQLConnection {
     final payload = MySQLPacketCommStmtExecute(
       stmtID: stmt._preparedPacket.stmtID,
       params: params,
+      paramTypes: paramTypes,
     );
 
     final packet = MySQLPacket(
@@ -1804,14 +1806,27 @@ class PreparedStmt {
   int get numOfParams => _preparedPacket.numOfParams;
 
   /// Executes this prepared statement with given [params]
-  Future<IResultSet> execute(List<dynamic> params) async {
+  Future<IResultSet> execute(
+    List<Object?> params, [
+    List<MySQLColumnType?>? paramTypes,
+  ]) async {
     if (numOfParams != params.length) {
       throw const MySQLClientException(
         'Can not execute prepared stmt: number of passed params != number of prepared params',
       );
     }
+    if (paramTypes != null && paramTypes.length != params.length) {
+      throw const MySQLClientException(
+        'Can not execute prepared stmt: length of paramTypes does not match length of params',
+      );
+    }
 
-    return _connection._executePreparedStmt(this, params, _iterable);
+    return _connection._executePreparedStmt(
+      this,
+      params,
+      _iterable,
+      paramTypes,
+    );
   }
 
   /// Deallocates this prepared statement
