@@ -763,7 +763,7 @@ void main() {
 
   group('testing COM_STMT_EXECUTE packet encoding', () {
     test(
-      'encoding UTC DateTime parameter in COM_STMT_EXECUTE strips trailing Z',
+      'encoding UTC DateTime parameter in COM_STMT_EXECUTE uses binary format',
       () {
         final dt = DateTime.utc(2026, 6, 10, 14, 30, 0);
         final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dt]);
@@ -772,20 +772,124 @@ void main() {
 
         check(bd.getUint8(0)).equals(0x17); // COM_STMT_EXECUTE
         check(bd.getUint32(1, Endian.little)).equals(1); // stmtID
-        check(bd.getUint8(12)).equals(MySQLColumnType.varStringType);
+        check(bd.getUint8(12)).equals(MySQLColumnType.dateTimeType);
 
-        final (str, _) = encoded.getUtf8LengthEncodedString(14);
-        check(str).equals('2026-06-10 14:30:00.000');
+        // value length for '2026-06-10 14:30:00' with 0 microseconds is 7 bytes
+        check(bd.getUint8(14)).equals(7);
+        check(bd.getUint16(15, Endian.little)).equals(2026);
+        check(bd.getUint8(17)).equals(6);
+        check(bd.getUint8(18)).equals(10);
+        check(bd.getUint8(19)).equals(14);
+        check(bd.getUint8(20)).equals(30);
+        check(bd.getUint8(21)).equals(0);
       },
     );
 
     test('encoding local DateTime parameter in COM_STMT_EXECUTE preserves format without Z', () {
-      final dt = DateTime(2026, 6, 10, 14, 30, 0);
+      final dt = DateTime(
+        2026,
+        6,
+        10,
+        14,
+        30,
+        0,
+        500,
+      ); // add 500 ms = 500000 us
       final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dt]);
       final encoded = pkt.encode();
-      final (str, _) = encoded.getUtf8LengthEncodedString(14);
-      check(str).equals('2026-06-10 14:30:00.000');
+      final bd = ByteData.sublistView(encoded);
+
+      check(bd.getUint8(12)).equals(MySQLColumnType.dateTimeType);
+
+      // non-zero microseconds results in 11 bytes length
+      check(bd.getUint8(14)).equals(11);
+      check(bd.getUint32(22, Endian.little)).equals(500000);
     });
+
+    test('encoding date-only DateTime parameter in COM_STMT_EXECUTE uses 4-byte form', () {
+      final dt = DateTime.utc(2026, 6, 10);
+      final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dt]);
+      final encoded = pkt.encode();
+      final bd = ByteData.sublistView(encoded);
+
+      check(bd.getUint8(12)).equals(MySQLColumnType.dateTimeType);
+      check(bd.getUint8(14)).equals(4); // 4 bytes length
+      check(bd.getUint16(15, Endian.little)).equals(2026);
+      check(bd.getUint8(17)).equals(6);
+      check(bd.getUint8(18)).equals(10);
+    });
+
+    test(
+      'encoding Duration parameter in COM_STMT_EXECUTE uses binary format',
+      () {
+        final dur = const Duration(
+          days: 12,
+          hours: 14,
+          minutes: 30,
+          seconds: 45,
+          milliseconds: 500,
+        );
+        final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dur]);
+        final encoded = pkt.encode();
+        final bd = ByteData.sublistView(encoded);
+
+        check(bd.getUint8(0)).equals(0x17);
+        check(bd.getUint8(12)).equals(MySQLColumnType.timeType);
+
+        // length 12
+        check(bd.getUint8(14)).equals(12);
+        check(bd.getUint8(15)).equals(0); // non-negative (0)
+        check(bd.getUint32(16, Endian.little)).equals(12); // 12 days
+        check(bd.getUint8(20)).equals(14); // 14 hours
+        check(bd.getUint8(21)).equals(30); // 30 minutes
+        check(bd.getUint8(22)).equals(45); // 45 seconds
+        check(bd.getUint32(23, Endian.little)).equals(500000); // 500000 ms
+      },
+    );
+
+    test('encoding zero-microsecond Duration parameter uses 8-byte form', () {
+      final dur = const Duration(days: 1, hours: 2, minutes: 3, seconds: 4);
+      final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dur]);
+      final encoded = pkt.encode();
+      final bd = ByteData.sublistView(encoded);
+
+      check(bd.getUint8(12)).equals(MySQLColumnType.timeType);
+      check(bd.getUint8(14)).equals(8); // 8 bytes length
+      check(bd.getUint8(15)).equals(0); // positive
+      check(bd.getUint32(16, Endian.little)).equals(1);
+      check(bd.getUint8(20)).equals(2);
+      check(bd.getUint8(21)).equals(3);
+      check(bd.getUint8(22)).equals(4);
+    });
+
+    test('encoding negative Duration parameter sets sign bit correctly', () {
+      final dur = const Duration(days: -1, hours: -2);
+      final pkt = MySQLPacketCommStmtExecute(stmtID: 1, params: [dur]);
+      final encoded = pkt.encode();
+      final bd = ByteData.sublistView(encoded);
+
+      check(bd.getUint8(12)).equals(MySQLColumnType.timeType);
+      check(bd.getUint8(15)).equals(1); // negative flag = 1
+    });
+
+    test(
+      'encoding with explicit paramTypes override adapts value payload size',
+      () {
+        final pkt = MySQLPacketCommStmtExecute(
+          stmtID: 1,
+          params: [42],
+          paramTypes: [MySQLColumnType.tinyType],
+        );
+        final encoded = pkt.encode();
+        final bd = ByteData.sublistView(encoded);
+
+        check(bd.getUint8(12)).equals(MySQLColumnType.tinyType);
+        check(bd.getUint8(14)).equals(42);
+        check(
+          encoded.length,
+        ).equals(15); // total length is exactly 15 bytes for 1-byte int value
+      },
+    );
 
     test('testing MySQLPacketExtraAuthDataResponse appendNullByte control', () {
       final data = Uint8List.fromList([1, 2, 3]);
