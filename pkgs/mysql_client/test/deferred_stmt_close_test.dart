@@ -1,7 +1,3 @@
-import 'dart:async';
-import 'dart:io';
-
-import 'package:mysql_client/mysql_client.dart';
 import 'package:test/test.dart';
 
 void main() {
