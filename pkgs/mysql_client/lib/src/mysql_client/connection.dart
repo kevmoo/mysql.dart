@@ -39,7 +39,37 @@ class MySQLConnection {
   Socket _socket;
   bool _connected = false;
   StreamSubscription<Uint8List>? _socketSubscription;
-  _MySQLConnectionState _state = _MySQLConnectionState.fresh;
+  _MySQLConnectionState _internalState = _MySQLConnectionState.fresh;
+  _MySQLConnectionState get _state => _internalState;
+  set _state(_MySQLConnectionState value) {
+    _internalState = value;
+    if (value == _MySQLConnectionState.connectionEstablished) {
+      _flushDeferredStmtCloses();
+    }
+  }
+
+  final ListQueue<int> _deferredStmtCloseIds = ListQueue<int>();
+
+  void _flushDeferredStmtCloses() {
+    if (_deferredStmtCloseIds.isEmpty) return;
+    if (!_connected) {
+      _deferredStmtCloseIds.clear();
+      return;
+    }
+    while (_deferredStmtCloseIds.isNotEmpty) {
+      final stmtID = _deferredStmtCloseIds.removeFirst();
+      final payload = MySQLPacketCommStmtClose(stmtID: stmtID);
+
+      final packet = MySQLPacket(
+        sequenceID: 0,
+        payload: payload,
+        payloadLength: 0,
+      );
+
+      _socket.add(packet.encode());
+    }
+  }
+
   final String _username;
   final String _password;
   final String _collation;
@@ -1179,10 +1209,10 @@ class MySQLConnection {
       );
     }
 
-    // wait for ready state
+    // queue statement close if we are not idle
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(_MySQLConnectionState.connectionEstablished)
-          .timeout(Duration(milliseconds: _timeoutMs));
+      _deferredStmtCloseIds.add(stmt._preparedPacket.stmtID);
+      return;
     }
 
     final payload = MySQLPacketCommStmtClose(
