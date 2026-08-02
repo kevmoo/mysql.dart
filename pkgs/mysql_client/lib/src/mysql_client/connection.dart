@@ -39,7 +39,42 @@ class MySQLConnection {
   Socket _socket;
   bool _connected = false;
   StreamSubscription<Uint8List>? _socketSubscription;
-  _MySQLConnectionState _state = _MySQLConnectionState.fresh;
+  _MySQLConnectionState _internalState = _MySQLConnectionState.fresh;
+  _MySQLConnectionState get _state => _internalState;
+  set _state(_MySQLConnectionState value) {
+    _internalState = value;
+    if (value == _MySQLConnectionState.connectionEstablished) {
+      _flushDeferredStmtCloses();
+    } else if (value == _MySQLConnectionState.closed) {
+      _deferredStmtCloseIds.clear();
+    }
+  }
+
+  final Set<int> _deferredStmtCloseIds = <int>{};
+
+  void _flushDeferredStmtCloses() {
+    if (_deferredStmtCloseIds.isEmpty) {
+      return;
+    }
+    if (!_connected) {
+      _deferredStmtCloseIds.clear();
+      return;
+    }
+    while (_deferredStmtCloseIds.isNotEmpty) {
+      final stmtID = _deferredStmtCloseIds.first;
+      _deferredStmtCloseIds.remove(stmtID);
+      final payload = MySQLPacketCommStmtClose(stmtID: stmtID);
+
+      final packet = MySQLPacket(
+        sequenceID: 0,
+        payload: payload,
+        payloadLength: 0,
+      );
+
+      _socket.add(packet.encode());
+    }
+  }
+
   final String _username;
   final String _password;
   final String _collation;
@@ -234,6 +269,8 @@ class MySQLConnection {
 
   void _handleSocketClose() {
     _connected = false;
+    _state = _MySQLConnectionState.closed;
+    _deferredStmtCloseIds.clear();
     _socket.destroy();
 
     for (var element in _onCloseCallbacks) {
@@ -1056,8 +1093,9 @@ class MySQLConnection {
 
   Future<IResultSet> _executePreparedStmt(
     PreparedStmt stmt,
-    List<dynamic> params,
+    List<Object?> params,
     bool iterable,
+    List<MySQLColumnType?>? paramTypes,
   ) async {
     if (!_connected) {
       throw const MySQLClientException(
@@ -1076,6 +1114,7 @@ class MySQLConnection {
     final payload = MySQLPacketCommStmtExecute(
       stmtID: stmt._preparedPacket.stmtID,
       params: params,
+      paramTypes: paramTypes,
     );
 
     final packet = MySQLPacket(
@@ -1255,10 +1294,10 @@ class MySQLConnection {
       );
     }
 
-    // wait for ready state
+    // queue statement close if we are not idle
     if (_state != _MySQLConnectionState.connectionEstablished) {
-      await _waitForState(_MySQLConnectionState.connectionEstablished)
-          .timeout(Duration(milliseconds: _timeoutMs));
+      _deferredStmtCloseIds.add(stmt._preparedPacket.stmtID);
+      return;
     }
 
     final payload = MySQLPacketCommStmtClose(
@@ -1316,6 +1355,7 @@ class MySQLConnection {
 
     _connected = false;
     _state = _MySQLConnectionState.closed;
+    _deferredStmtCloseIds.clear();
 
     for (var element in _onCloseCallbacks) {
       element();
@@ -1338,6 +1378,7 @@ class MySQLConnection {
 
     _connected = false;
     _state = _MySQLConnectionState.closed;
+    _deferredStmtCloseIds.clear();
 
     for (var element in _onCloseCallbacks) {
       element();
@@ -1880,14 +1921,27 @@ class PreparedStmt {
   int get numOfParams => _preparedPacket.numOfParams;
 
   /// Executes this prepared statement with given [params]
-  Future<IResultSet> execute(List<dynamic> params) async {
+  Future<IResultSet> execute(
+    List<Object?> params, [
+    List<MySQLColumnType?>? paramTypes,
+  ]) async {
     if (numOfParams != params.length) {
       throw const MySQLClientException(
         'Can not execute prepared stmt: number of passed params != number of prepared params',
       );
     }
+    if (paramTypes != null && paramTypes.length != params.length) {
+      throw const MySQLClientException(
+        'Can not execute prepared stmt: length of paramTypes does not match length of params',
+      );
+    }
 
-    return _connection._executePreparedStmt(this, params, _iterable);
+    return _connection._executePreparedStmt(
+      this,
+      params,
+      _iterable,
+      paramTypes,
+    );
   }
 
   /// Deallocates this prepared statement
