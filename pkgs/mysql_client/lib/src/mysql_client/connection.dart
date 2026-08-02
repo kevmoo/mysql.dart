@@ -79,8 +79,13 @@ class MySQLConnection {
   final String _password;
   final String _collation;
   final String? _databaseName;
+  final int autoPreparedStatementCacheCapacity;
+  final _autoPreparedStmtCache = <String, PreparedStmt>{};
   Future<void> Function(Uint8List data)? _responseCallback;
   final List<void Function()> _onCloseCallbacks = [];
+
+  Map<String, PreparedStmt> get testingAutoPreparedStmtCache =>
+      _autoPreparedStmtCache;
   bool _inTransaction = false;
   final bool _secure;
   final SecurityContext? _securityContext;
@@ -110,6 +115,7 @@ class MySQLConnection {
     this._serverPublicKeyRetrieval = false,
     this._rsaPublicKey,
     this._databaseName,
+    this.autoPreparedStatementCacheCapacity = 32,
   });
 
   /// Creates connection with provided options.
@@ -146,6 +152,7 @@ class MySQLConnection {
     String collation = 'utf8mb4_general_ci',
     bool serverPublicKeyRetrieval = false,
     String? rsaPublicKey,
+    int autoPreparedStatementCacheCapacity = 32,
   }) async {
     final socket = await Socket.connect(host, port);
 
@@ -166,6 +173,7 @@ class MySQLConnection {
       collation: collation,
       serverPublicKeyRetrieval: serverPublicKeyRetrieval,
       rsaPublicKey: rsaPublicKey,
+      autoPreparedStatementCacheCapacity: autoPreparedStatementCacheCapacity,
     );
 
     return client;
@@ -605,6 +613,18 @@ class MySQLConnection {
       );
     }
 
+    if (params != null &&
+        params.isNotEmpty &&
+        autoPreparedStatementCacheCapacity > 0) {
+      final hasBinaryParam = params.values.any(
+        (val) =>
+            val is Uint8List || val is DateTime || val is double || val is int,
+      );
+      if (hasBinaryParam) {
+        return _autoPrepareAndExecute(query, params, iterable);
+      }
+    }
+
     // wait for ready state
     if (_state != _MySQLConnectionState.connectionEstablished) {
       await _waitForState(_MySQLConnectionState.connectionEstablished)
@@ -893,6 +913,62 @@ class MySQLConnection {
     }
 
     return query;
+  }
+
+  Future<IResultSet> _autoPrepareAndExecute(
+    String query,
+    Map<String, dynamic> params,
+    bool iterable,
+  ) async {
+    final pattern = RegExp(r':(\w+)');
+    final matches = pattern.allMatches(query).where((match) {
+      final subString = query.substring(0, match.start);
+      var count = "'".allMatches(subString).length;
+      if (count > 0 && count.isOdd) return false;
+      count = '"'.allMatches(subString).length;
+      if (count > 0 && count.isOdd) return false;
+      return true;
+    }).toList();
+
+    var preparedQuery = query;
+    final positionalParams = <Object?>[];
+
+    if (matches.isNotEmpty) {
+      var lengthShift = 0;
+      for (final match in matches) {
+        final paramName = match.group(1);
+        if (!params.containsKey(paramName)) {
+          throw MySQLClientException(
+            'There is no parameter with name: $paramName',
+          );
+        }
+        positionalParams.add(params[paramName]);
+        final newQuery = preparedQuery.replaceFirst(
+          match.group(0)!,
+          '?',
+          match.start + lengthShift,
+        );
+        lengthShift += newQuery.length - preparedQuery.length;
+        preparedQuery = newQuery;
+      }
+    } else {
+      positionalParams.addAll(params.values);
+    }
+
+    if (_autoPreparedStmtCache.containsKey(preparedQuery)) {
+      final stmt = _autoPreparedStmtCache.remove(preparedQuery)!;
+      _autoPreparedStmtCache[preparedQuery] = stmt;
+      return stmt.execute(positionalParams);
+    }
+
+    final stmt = await prepare(preparedQuery);
+    if (_autoPreparedStmtCache.length >= autoPreparedStatementCacheCapacity) {
+      final oldestKey = _autoPreparedStmtCache.keys.first;
+      final oldestStmt = _autoPreparedStmtCache.remove(oldestKey)!;
+      await oldestStmt.deallocate();
+    }
+    _autoPreparedStmtCache[preparedQuery] = stmt;
+    return stmt.execute(positionalParams);
   }
 
   /// Prepares given [query]

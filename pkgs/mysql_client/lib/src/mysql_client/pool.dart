@@ -18,6 +18,7 @@ class MySQLConnectionPool {
   final int timeoutMs;
   final bool serverPublicKeyRetrieval;
   final String? rsaPublicKey;
+  final int autoPreparedStatementCacheCapacity;
   String? _cachedRsaPublicKey;
 
   /// Time after which an idle connection is pinged before reuse
@@ -66,6 +67,7 @@ class MySQLConnectionPool {
     this.timeoutMs = 10000,
     this.serverPublicKeyRetrieval = false,
     this.rsaPublicKey,
+    this.autoPreparedStatementCacheCapacity = 32,
     this.idleTestThreshold = const Duration(seconds: 60),
     this.maxConnectionAge = const Duration(hours: 12),
     this.maxSessionUse = const Duration(hours: 8),
@@ -272,6 +274,8 @@ class MySQLConnectionPool {
               collation: collation,
               serverPublicKeyRetrieval: serverPublicKeyRetrieval,
               rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
+              autoPreparedStatementCacheCapacity:
+                  autoPreparedStatementCacheCapacity,
             );
 
       if (connectionFactory == null) {

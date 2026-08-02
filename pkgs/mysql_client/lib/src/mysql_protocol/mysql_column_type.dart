@@ -249,11 +249,16 @@ extension type const MySQLColumnType(int _) implements int {
       final result = StringBuffer();
       result.write('$year-');
       result.write('${month.toString().padLeft(2, '0')}-');
-      result.write('${day.toString().padLeft(2, '0')} ');
-      result.write('${hour.toString().padLeft(2, '0')}:');
-      result.write('${minute.toString().padLeft(2, '0')}:');
-      result.write('${second.toString().padLeft(2, '0')}.');
-      result.write(microSecond.toString());
+      result.write(day.toString().padLeft(2, '0'));
+      if (numOfBytes >= 7) {
+        result.write(' ');
+        result.write('${hour.toString().padLeft(2, '0')}:');
+        result.write('${minute.toString().padLeft(2, '0')}:');
+        result.write(second.toString().padLeft(2, '0'));
+      }
+      if (numOfBytes >= 11) {
+        result.write('.$microSecond');
+      }
 
       return (result.toString(), startOffset - initialOffset);
     case MySQLColumnType.timeType:
@@ -304,8 +309,10 @@ extension type const MySQLColumnType(int _) implements int {
       }
       result.write('${hours.toString().padLeft(2, '0')}:');
       result.write('${minutes.toString().padLeft(2, '0')}:');
-      result.write('${seconds.toString().padLeft(2, '0')}.');
-      result.write(microSecond.toString());
+      result.write(seconds.toString().padLeft(2, '0'));
+      if (numOfBytes >= 12) {
+        result.write('.$microSecond');
+      }
 
       return (result.toString(), startOffset - initialOffset);
     case MySQLColumnType.stringType:
