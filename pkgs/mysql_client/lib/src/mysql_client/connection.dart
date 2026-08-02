@@ -45,19 +45,24 @@ class MySQLConnection {
     _internalState = value;
     if (value == _MySQLConnectionState.connectionEstablished) {
       _flushDeferredStmtCloses();
+    } else if (value == _MySQLConnectionState.closed) {
+      _deferredStmtCloseIds.clear();
     }
   }
 
-  final ListQueue<int> _deferredStmtCloseIds = ListQueue<int>();
+  final _deferredStmtCloseIds = LinkedHashSet<int>();
 
   void _flushDeferredStmtCloses() {
-    if (_deferredStmtCloseIds.isEmpty) return;
+    if (_deferredStmtCloseIds.isEmpty) {
+      return;
+    }
     if (!_connected) {
       _deferredStmtCloseIds.clear();
       return;
     }
     while (_deferredStmtCloseIds.isNotEmpty) {
-      final stmtID = _deferredStmtCloseIds.removeFirst();
+      final stmtID = _deferredStmtCloseIds.first;
+      _deferredStmtCloseIds.remove(stmtID);
       final payload = MySQLPacketCommStmtClose(stmtID: stmtID);
 
       final packet = MySQLPacket(
@@ -256,6 +261,8 @@ class MySQLConnection {
 
   void _handleSocketClose() {
     _connected = false;
+    _state = _MySQLConnectionState.closed;
+    _deferredStmtCloseIds.clear();
     _socket.destroy();
 
     for (var element in _onCloseCallbacks) {
@@ -1270,6 +1277,7 @@ class MySQLConnection {
 
     _connected = false;
     _state = _MySQLConnectionState.closed;
+    _deferredStmtCloseIds.clear();
 
     for (var element in _onCloseCallbacks) {
       element();
@@ -1292,6 +1300,7 @@ class MySQLConnection {
 
     _connected = false;
     _state = _MySQLConnectionState.closed;
+    _deferredStmtCloseIds.clear();
 
     for (var element in _onCloseCallbacks) {
       element();
