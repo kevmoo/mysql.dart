@@ -18,6 +18,7 @@ class MySQLConnectionPool {
   final int timeoutMs;
   final bool serverPublicKeyRetrieval;
   final String? rsaPublicKey;
+  final int autoPreparedStatementCacheCapacity;
   String? _cachedRsaPublicKey;
 
   final List<MySQLConnection> _activeConnections = [];
@@ -49,6 +50,7 @@ class MySQLConnectionPool {
     this.timeoutMs = 10000,
     this.serverPublicKeyRetrieval = false,
     this.rsaPublicKey,
+    this.autoPreparedStatementCacheCapacity = 32,
   });
 
   /// Number of active connections in this pool
@@ -159,6 +161,8 @@ class MySQLConnectionPool {
           collation: collation,
           serverPublicKeyRetrieval: serverPublicKeyRetrieval,
           rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
+          autoPreparedStatementCacheCapacity:
+              autoPreparedStatementCacheCapacity,
         );
 
         await conn.connect(timeoutMs: timeoutMs);
@@ -224,6 +228,7 @@ class MySQLConnectionPool {
         collation: collation,
         serverPublicKeyRetrieval: serverPublicKeyRetrieval,
         rsaPublicKey: _cachedRsaPublicKey ?? rsaPublicKey,
+        autoPreparedStatementCacheCapacity: autoPreparedStatementCacheCapacity,
       );
 
       await conn.connect(timeoutMs: timeoutMs);
