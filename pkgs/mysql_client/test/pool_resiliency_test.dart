@@ -11,6 +11,12 @@ class MockMySQLConnection implements MySQLConnection {
   @override
   String? rsaPublicKey;
 
+  @override
+  int get autoPreparedStatementCacheCapacity => 0;
+
+  @override
+  Map<String, PreparedStmt> get testingAutoPreparedStmtCache => {};
+
   bool closed = false;
   int executeCount = 0;
   bool shouldThrowOnPing = false;
