@@ -80,7 +80,16 @@ void main() {
           values: textRowPkt.values,
         );
         check(row.colBytesAt(0)).isNotNull().deepEquals(rawPayload);
+        check(row.colBytesByName('payload')).isNotNull().deepEquals(rawPayload);
         check(() => row.colAt(0)).throws<MySQLClientException>();
+
+        // Verify non-existent column name throws exception
+        check(() => row.colByName('non_existent'))
+            .throws<MySQLClientException>();
+        check(() => row.colBytesByName('non_existent'))
+            .throws<MySQLClientException>();
+        check(() => row.typedColByName<String>('non_existent'))
+            .throws<MySQLClientException>();
 
         // Verify nullable generic type arguments
         check(row.typedColAt<Uint8List?>(0)).isNotNull().deepEquals(rawPayload);
