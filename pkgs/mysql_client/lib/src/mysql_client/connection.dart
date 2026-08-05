@@ -1754,29 +1754,23 @@ class ResultSetRow {
     );
   }
 
-  /// Returns the raw uncorrupted byte buffer for column with [columnName]
-  Uint8List? colBytesByName(String columnName) {
+  int _colIndexByName(String columnName) {
     final colIndex = _colDefs.indexWhere(
       (element) => element.name.toLowerCase() == columnName.toLowerCase(),
     );
-
     if (colIndex == -1) {
       throw MySQLClientException('There is no column with name: $columnName');
     }
-
-    return colBytesAt(colIndex);
+    return colIndex;
   }
+
+  /// Returns the raw uncorrupted byte buffer for column with [columnName]
+  Uint8List? colBytesByName(String columnName) =>
+      colBytesAt(_colIndexByName(columnName));
 
   /// Get column data by column name
   Object? colByName(String columnName) {
-    final colIndex = _colDefs.indexWhere(
-      (element) => element.name.toLowerCase() == columnName.toLowerCase(),
-    );
-
-    if (colIndex == -1) {
-      throw MySQLClientException('There is no column with name: $columnName');
-    }
-
+    final colIndex = _colIndexByName(columnName);
     if (colIndex >= _values.length) {
       throw const MySQLClientException('Column index is out of range');
     }
@@ -1799,39 +1793,8 @@ class ResultSetRow {
   /// to decide is it possible to make such a conversion
   ///
   /// Throws [MySQLClientException] if conversion is not possible
-  T? typedColByName<T>(String columnName) {
-    final colIndex = _colDefs.indexWhere(
-      (element) => element.name.toLowerCase() == columnName.toLowerCase(),
-    );
-
-    if (colIndex == -1) {
-      throw MySQLClientException('There is no column with name: $columnName');
-    }
-
-    final isBinary = _colDefs[colIndex].type.isBinary(
-      _colDefs[colIndex].charset,
-    );
-    if (T == Uint8List ||
-        T == _typeOf<Uint8List?>() ||
-        T == TypedData ||
-        T == _typeOf<TypedData?>() ||
-        T == _typeOf<List<int>>() ||
-        T == _typeOf<List<int>?>() ||
-        (isBinary &&
-            (T == _typeOf<dynamic>() ||
-                T == Object ||
-                T == _typeOf<Object?>()))) {
-      return colBytesAt(colIndex) as T?;
-    }
-
-    final value = colAt(colIndex);
-    final colDef = _colDefs[colIndex];
-
-    return colDef.type.convertStringValueToProvidedType<T>(
-      value,
-      colDef.columnLength,
-    );
-  }
+  T? typedColByName<T>(String columnName) =>
+      typedColAt<T>(_colIndexByName(columnName));
 
   /// Get data for all columns
   Map<String, Object?> assoc() {
