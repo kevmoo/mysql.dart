@@ -193,10 +193,10 @@ void main() {
 
       final row = MySQLBinaryResultSetRowPacket.decode(buffer, colDefs);
 
-      check(row.values[0]).equals(250);
-      check(row.values[1]).equals(60000);
-      check(row.values[2]).equals(3000000000);
-      check(row.values[3]).equals(BigInt.parse('18446744073709551615'));
+      check(row.values[0]).equals('250');
+      check(row.values[1]).equals('60000');
+      check(row.values[2]).equals('3000000000');
+      check(row.values[3]).equals('18446744073709551615');
     });
 
     test('testing binary row signed integer columns decoding', () {
@@ -271,10 +271,10 @@ void main() {
 
       final row = MySQLBinaryResultSetRowPacket.decode(buffer, colDefs);
 
-      check(row.values[0]).equals(-5);
-      check(row.values[1]).equals(-300);
-      check(row.values[2]).equals(-70000);
-      check(row.values[3]).equals(-90000000000);
+      check(row.values[0]).equals('-5');
+      check(row.values[1]).equals('-300');
+      check(row.values[2]).equals('-70000');
+      check(row.values[3]).equals('-90000000000');
     });
 
     test('testing binary row YEAR column decoding (uint16 little endian)', () {
@@ -303,7 +303,7 @@ void main() {
 
       final row = MySQLBinaryResultSetRowPacket.decode(buffer, colDefs);
 
-      check(row.values.first).equals(2026);
+      check(row.values.first).equals('2026');
     });
 
     test('testing binary row TIMESTAMP with microsecond zero-padding', () {

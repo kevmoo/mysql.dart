@@ -208,36 +208,37 @@ extension type const MySQLColumnType(int _) implements int {
       final value = isUnsigned
           ? data.getUint8(startOffset)
           : data.getInt8(startOffset);
-      return (value, 1);
+      return (value.toString(), 1);
     case MySQLColumnType.shortType:
       final value = isUnsigned
           ? data.getUint16(startOffset, Endian.little)
           : data.getInt16(startOffset, Endian.little);
-      return (value, 2);
+      return (value.toString(), 2);
     case MySQLColumnType.yearType:
       final value = data.getUint16(startOffset, Endian.little);
-      return (value, 2);
+      return (value.toString(), 2);
     case MySQLColumnType.longType:
     case MySQLColumnType.int24Type:
       final value = isUnsigned
           ? data.getUint32(startOffset, Endian.little)
           : data.getInt32(startOffset, Endian.little);
-      return (value, 4);
+      return (value.toString(), 4);
     case MySQLColumnType.longLongType:
       if (isUnsigned) {
         final raw = data.getInt64(startOffset, Endian.little);
         final value = BigInt.from(raw).toUnsigned(64);
-        return (value, 8);
+        return (value.toString(), 8);
       } else {
         final value = data.getInt64(startOffset, Endian.little);
-        return (value, 8);
+        return (value.toString(), 8);
       }
     case MySQLColumnType.floatType:
       final value = data.getFloat32(startOffset, Endian.little);
-      return (value, 4);
+      return (value.toString(), 4);
     case MySQLColumnType.doubleType:
       final value = data.getFloat64(startOffset, Endian.little);
-      return (value, 8);
+      return (value.toString(), 8);
+
     case MySQLColumnType.dateType:
     case MySQLColumnType.dateTimeType:
     case MySQLColumnType.timestampType:
