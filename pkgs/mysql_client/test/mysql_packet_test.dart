@@ -150,6 +150,91 @@ void main() {
         check(actual.$1.toString()).equals('1099511627775');
         check(actual.$2).equals(9);
       });
+    });
+
+    group('test decoding truncated / EOF variable length ints', () {
+      test('EOF when startOffset >= lengthInBytes returns -1, 0', () {
+        var buff = ByteData.sublistView(Uint8List(0));
+        var actual = buff.getVariableEncInt(0);
+        check(actual.$1.toInt()).equals(-1);
+        check(actual.$2).equals(0);
+
+        var buff2 = ByteData.sublistView(Uint8List.fromList([1, 2, 3]));
+        var actual2 = buff2.getVariableEncInt(3);
+        check(actual2.$1.toInt()).equals(-1);
+        check(actual2.$2).equals(0);
+      });
+
+      test('truncated 0xfc 2-byte int returns -1, 1', () {
+        var buff = ByteData.sublistView(Uint8List.fromList([0xfc, 0x01]));
+        var actual = buff.getVariableEncInt(0);
+        check(actual.$1.toInt()).equals(-1);
+        check(actual.$2).equals(1);
+      });
+
+      test('truncated 0xfd 3-byte int returns -1, 1', () {
+        var buff = ByteData.sublistView(Uint8List.fromList([0xfd, 0x01, 0x02]));
+        var actual = buff.getVariableEncInt(0);
+        check(actual.$1.toInt()).equals(-1);
+        check(actual.$2).equals(1);
+      });
+
+      test('truncated 0xfe 8-byte int returns -1, 1', () {
+        var buff = ByteData.sublistView(
+          Uint8List.fromList([0xfe, 0x01, 0x02, 0x03, 0x04]),
+        );
+        var actual = buff.getVariableEncInt(0);
+        check(actual.$1.toInt()).equals(-1);
+        check(actual.$2).equals(1);
+      });
+    });
+
+    group('test length-encoded string and byte clamping and bounds safety', () {
+      test('EOF startOffset returns empty string and 0 length', () {
+        final buffer = Uint8List(0);
+        final (str, len) = buffer.getUtf8LengthEncodedString(0);
+        check(str).equals('');
+        check(len).equals(0);
+
+        final (bytes, bLen) = buffer.getLengthEncodedBytes(0);
+        check(bytes).isEmpty();
+        check(bLen).equals(0);
+      });
+
+      test(
+        '0xfb NULL length returns empty string/bytes and 1 byte consumed',
+        () {
+          final buffer = Uint8List.fromList([0xfb]);
+          final (str, len) = buffer.getUtf8LengthEncodedString(0);
+          check(str).equals('');
+          check(len).equals(1);
+
+          final (bytes, bLen) = buffer.getLengthEncodedBytes(0);
+          check(bytes).isEmpty();
+          check(bLen).equals(1);
+        },
+      );
+
+      test('truncated payload clamps to available buffer length', () {
+        // Length prefix claims 50 bytes, but only 4 bytes of actual content exist
+        final buffer = Uint8List.fromList([
+          50,
+          0x61,
+          0x62,
+          0x63,
+          0x64,
+        ]); // "abcd"
+        final (str, len) = buffer.getUtf8LengthEncodedString(0);
+        check(str).equals('abcd');
+        check(len).equals(51); // 1 header byte + 50 claimed bytes
+
+        final (bytes, bLen) = buffer.getLengthEncodedBytes(0);
+        check(bytes).deepEquals([0x61, 0x62, 0x63, 0x64]);
+        check(bLen).equals(51);
+      });
+    });
+
+    group('test encoding ints', () {
       test('test encoding int value 0', () {
         final writer = ByteDataWriter(endian: Endian.little);
         writer.writeVariableEncInt(0);
