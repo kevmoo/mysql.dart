@@ -14,6 +14,8 @@ class MySQLColumnDefinitionPacket extends MySQLPacketPayload {
   int charset;
   int columnLength;
   MySQLColumnType type;
+  int flags;
+  int decimals;
 
   MySQLColumnDefinitionPacket({
     required this.catalog,
@@ -25,7 +27,22 @@ class MySQLColumnDefinitionPacket extends MySQLPacketPayload {
     required this.charset,
     required this.columnLength,
     required this.type,
+    this.flags = 0,
+    this.decimals = 0,
   });
+
+  bool get isNotNull => (flags & 0x0001) != 0;
+  bool get isPrimaryKey => (flags & 0x0002) != 0;
+  bool get isUniqueKey => (flags & 0x0004) != 0;
+  bool get isMultipleKey => (flags & 0x0008) != 0;
+  bool get isBlob => (flags & 0x0010) != 0;
+  bool get isUnsigned => (flags & 0x0020) != 0;
+  bool get isZeroFill => (flags & 0x0040) != 0;
+  bool get isBinary => (flags & 0x0080) != 0;
+  bool get isEnum => (flags & 0x0100) != 0;
+  bool get isAutoIncrement => (flags & 0x0200) != 0;
+  bool get isTimestamp => (flags & 0x0400) != 0;
+  bool get isSet => (flags & 0x0800) != 0;
 
   factory MySQLColumnDefinitionPacket.decode(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
@@ -65,6 +82,14 @@ class MySQLColumnDefinitionPacket extends MySQLPacketPayload {
     final type = (offset < buffer.length) ? byteData.getUint8(offset) : 0;
     offset += 1;
 
+    final flags = (offset + 2 <= buffer.length)
+        ? byteData.getUint16(offset, Endian.little)
+        : 0;
+    offset += 2;
+
+    final decimals = (offset < buffer.length) ? byteData.getUint8(offset) : 0;
+    offset += 1;
+
     return MySQLColumnDefinitionPacket(
       catalog: catalog.$1,
       charset: charset,
@@ -75,6 +100,8 @@ class MySQLColumnDefinitionPacket extends MySQLPacketPayload {
       schema: schema.$1,
       table: table.$1,
       type: MySQLColumnType.create(type),
+      flags: flags,
+      decimals: decimals,
     );
   }
 

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../exception.dart';
 import 'mysql_protocol_extension.dart';
+import 'packet/packet_column_definition.dart';
 
 extension type const MySQLColumnType(int _) implements int {
   factory MySQLColumnType.create(int value) = MySQLColumnType;
@@ -70,6 +71,21 @@ extension type const MySQLColumnType(int _) implements int {
 
     if (value is! String || this == MySQLColumnType.jsonType) {
       if (value is T) return value as T;
+      if (value is num) {
+        if (T == int) return value.toInt() as T;
+        if (T == double) return value.toDouble() as T;
+        if (T == num) return value as T;
+        if (T == bool) return (value > 0) as T;
+        if (T == BigInt) return BigInt.from(value) as T;
+        if (T == String) return value.toString() as T;
+      }
+      if (value is BigInt) {
+        if (T == BigInt) return value as T;
+        if (T == int) return value.toInt() as T;
+        if (T == num) return value.toInt() as T;
+        if (T == double) return value.toDouble() as T;
+        if (T == String) return value.toString() as T;
+      }
       throw MySQLProtocolException(
         'Can not convert MySQL type $this to requested type ${T.runtimeType}',
       );
@@ -89,6 +105,12 @@ extension type const MySQLColumnType(int _) implements int {
             ? int.parse(strValue) as T
             : throw MySQLProtocolException(
                 'Can not convert MySQL type $this to requested type int',
+              ),
+      const (BigInt) =>
+        isInteger
+            ? BigInt.parse(strValue) as T
+            : throw MySQLProtocolException(
+                'Can not convert MySQL type $this to requested type BigInt',
               ),
       const (double) =>
         isNumeric
@@ -172,32 +194,51 @@ extension type const MySQLColumnType(int _) implements int {
 }
 
 (Object, int) parseBinaryColumnData(
-  int columnType,
-  int charset,
+  MySQLColumnDefinitionPacket colDef,
   ByteData data,
   Uint8List buffer,
   int startOffset,
 ) {
+  final isUnsigned = colDef.isUnsigned;
+  final columnType = colDef.type;
+  final charset = colDef.charset;
+
   switch (MySQLColumnType(columnType)) {
     case MySQLColumnType.tinyType:
-      final value = data.getInt8(startOffset);
+      final value = isUnsigned
+          ? data.getUint8(startOffset)
+          : data.getInt8(startOffset);
       return (value.toString(), 1);
     case MySQLColumnType.shortType:
-      final value = data.getInt16(startOffset, Endian.little);
+      final value = isUnsigned
+          ? data.getUint16(startOffset, Endian.little)
+          : data.getInt16(startOffset, Endian.little);
+      return (value.toString(), 2);
+    case MySQLColumnType.yearType:
+      final value = data.getUint16(startOffset, Endian.little);
       return (value.toString(), 2);
     case MySQLColumnType.longType:
     case MySQLColumnType.int24Type:
-      final value = data.getInt32(startOffset, Endian.little);
+      final value = isUnsigned
+          ? data.getUint32(startOffset, Endian.little)
+          : data.getInt32(startOffset, Endian.little);
       return (value.toString(), 4);
     case MySQLColumnType.longLongType:
-      final value = data.getInt64(startOffset, Endian.little);
-      return (value.toString(), 8);
+      if (isUnsigned) {
+        final raw = data.getInt64(startOffset, Endian.little);
+        final value = BigInt.from(raw).toUnsigned(64);
+        return (value.toString(), 8);
+      } else {
+        final value = data.getInt64(startOffset, Endian.little);
+        return (value.toString(), 8);
+      }
     case MySQLColumnType.floatType:
       final value = data.getFloat32(startOffset, Endian.little);
       return (value.toString(), 4);
     case MySQLColumnType.doubleType:
       final value = data.getFloat64(startOffset, Endian.little);
       return (value.toString(), 8);
+
     case MySQLColumnType.dateType:
     case MySQLColumnType.dateTimeType:
     case MySQLColumnType.timestampType:
@@ -257,7 +298,7 @@ extension type const MySQLColumnType(int _) implements int {
         result.write(second.toString().padLeft(2, '0'));
       }
       if (numOfBytes >= 11) {
-        result.write('.$microSecond');
+        result.write('.${microSecond.toString().padLeft(6, '0')}');
       }
 
       return (result.toString(), startOffset - initialOffset);
@@ -311,7 +352,7 @@ extension type const MySQLColumnType(int _) implements int {
       result.write('${minutes.toString().padLeft(2, '0')}:');
       result.write(seconds.toString().padLeft(2, '0'));
       if (numOfBytes >= 12) {
-        result.write('.$microSecond');
+        result.write('.${microSecond.toString().padLeft(6, '0')}');
       }
 
       return (result.toString(), startOffset - initialOffset);

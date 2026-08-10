@@ -1063,6 +1063,18 @@ class MySQLConnection {
 
           if (payload is MySQLPacketStmtPrepareOK) {
             preparedPacket = payload;
+            if (payload.numOfCols == 0 && payload.numOfParams == 0) {
+              state = _StmtPrepareState.eofDecoded;
+              completer.complete(
+                PreparedStmt._(
+                  preparedPacket: payload,
+                  connection: this,
+                  iterable: iterable,
+                ),
+              );
+              _state = _MySQLConnectionState.connectionEstablished;
+              return;
+            }
           } else if (payload is MySQLPacketError) {
             completer.completeError(
               MySQLServerException(payload.errorMessage, payload.errorCode),
@@ -1838,12 +1850,28 @@ class ResultSetRow {
 
       final dynamic decodedValue = switch (dartType) {
         const (Uint8List) => value,
-        const (int) => int.parse(value as String),
-        const (double) => double.parse(value as String),
-        const (num) => num.parse(value as String),
-        const (bool) => int.parse(value as String) > 0,
-        const (DateTime) => DateTime.parse(value as String),
-        const (String) => value as String,
+        const (int) =>
+          value is int
+              ? value
+              : (value is num
+                    ? value.toInt()
+                    : (value is BigInt
+                          ? value.toInt()
+                          : int.parse(value as String))),
+        const (double) =>
+          value is double
+              ? value
+              : (value is num
+                    ? value.toDouble()
+                    : double.parse(value as String)),
+        const (num) => value is num ? value : num.parse(value as String),
+        const (bool) =>
+          value is bool
+              ? value
+              : (value is num ? value > 0 : int.parse(value as String) > 0),
+        const (DateTime) =>
+          value is DateTime ? value : DateTime.parse(value as String),
+        const (String) => value.toString(),
         _ => value,
       };
 
