@@ -20,9 +20,14 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
-    var values = <Object?>[];
+    final values = <Object?>[];
 
     for (var x = 0; x < numOfCols; x++) {
+      if (offset >= buffer.length) {
+        values.add(null);
+        continue;
+      }
+
       final nextByte = byteData.getUint8(offset);
 
       if (nextByte == 0xfb) {
@@ -32,7 +37,7 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
         final colDef = colDefs[x];
         if (colDef.type == MySQLColumnType.jsonType) {
           final (val, len) = buffer.getUtf8LengthEncodedString(offset);
-          values.add(jsonDecode(val));
+          values.add(val.isNotEmpty ? jsonDecode(val) : null);
           offset += len;
         } else if (colDef.type == MySQLColumnType.bitType ||
             colDef.type.isBinary(colDef.charset)) {

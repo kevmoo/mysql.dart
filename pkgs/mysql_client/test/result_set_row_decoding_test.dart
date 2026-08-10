@@ -120,5 +120,180 @@ void main() {
 
       check(row.values.first).isA<Uint8List>().deepEquals([0xde, 0xad]);
     });
+
+    test('testing textual row NULL JSON column decoding', () {
+      final writer = ByteDataWriter();
+      writer.writeUint8(0xfb); // NULL value marker
+      final buffer = writer.toBytes();
+
+      final colDefs = <MySQLColumnDefinitionPacket>[
+        MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'test',
+          table: 'test',
+          orgTable: 'test',
+          name: 'col',
+          orgName: 'col',
+          charset: 63,
+          columnLength: 100,
+          type: MySQLColumnType.jsonType,
+        ),
+      ];
+
+      final row = MySQLResultSetRowPacket.decode(buffer, 1, colDefs);
+
+      check(row.values.first).isNull();
+    });
+
+    test(
+      'testing textual row with heterogeneous mixed NULL and non-NULL columns',
+      () {
+        final writer = ByteDataWriter();
+
+        // Col 1: VARCHAR "hello"
+        writer.writeVariableEncInt(5);
+        writer.write([0x68, 0x65, 0x6c, 0x6c, 0x6f]);
+
+        // Col 2: NULL integer
+        writer.writeUint8(0xfb);
+
+        // Col 3: JSON '{"k":"v"}'
+        final jsonBytes = utf8.encode('{"k":"v"}');
+        writer.writeVariableEncInt(jsonBytes.length);
+        writer.write(jsonBytes);
+
+        // Col 4: NULL string
+        writer.writeUint8(0xfb);
+
+        final buffer = writer.toBytes();
+
+        final colDefs = <MySQLColumnDefinitionPacket>[
+          MySQLColumnDefinitionPacket(
+            catalog: 'def',
+            schema: 'test',
+            table: 'test',
+            orgTable: 'test',
+            name: 'str_col',
+            orgName: 'str_col',
+            charset: 33, // UTF-8
+            columnLength: 100,
+            type: MySQLColumnType.varStringType,
+          ),
+          MySQLColumnDefinitionPacket(
+            catalog: 'def',
+            schema: 'test',
+            table: 'test',
+            orgTable: 'test',
+            name: 'int_col',
+            orgName: 'int_col',
+            charset: 63,
+            columnLength: 11,
+            type: MySQLColumnType.longType,
+          ),
+          MySQLColumnDefinitionPacket(
+            catalog: 'def',
+            schema: 'test',
+            table: 'test',
+            orgTable: 'test',
+            name: 'json_col',
+            orgName: 'json_col',
+            charset: 63,
+            columnLength: 255,
+            type: MySQLColumnType.jsonType,
+          ),
+          MySQLColumnDefinitionPacket(
+            catalog: 'def',
+            schema: 'test',
+            table: 'test',
+            orgTable: 'test',
+            name: 'null_str_col',
+            orgName: 'null_str_col',
+            charset: 33,
+            columnLength: 100,
+            type: MySQLColumnType.varStringType,
+          ),
+        ];
+
+        final row = MySQLResultSetRowPacket.decode(buffer, 4, colDefs);
+
+        check(row.values).deepEquals([
+          'hello',
+          null,
+          {'k': 'v'},
+          null,
+        ]);
+      },
+    );
+
+    test('testing textual row with early buffer exhaustion (EOF before all columns)', () {
+      final writer = ByteDataWriter();
+
+      // Only Col 1 provided
+      writer.writeVariableEncInt(3);
+      writer.write([0x66, 0x6f, 0x6f]); // "foo"
+      final buffer = writer.toBytes();
+
+      final colDefs = <MySQLColumnDefinitionPacket>[
+        MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'test',
+          table: 'test',
+          orgTable: 'test',
+          name: 'col1',
+          orgName: 'col1',
+          charset: 33,
+          columnLength: 100,
+          type: MySQLColumnType.varStringType,
+        ),
+        MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'test',
+          table: 'test',
+          orgTable: 'test',
+          orgName: 'col2',
+          name: 'col2',
+          charset: 33,
+          columnLength: 100,
+          type: MySQLColumnType.varStringType,
+        ),
+      ];
+
+      final row = MySQLResultSetRowPacket.decode(buffer, 2, colDefs);
+
+      check(row.values).deepEquals(['foo', null]);
+    });
+  });
+
+  group('testing column definition packet truncation safety', () {
+    test(
+      'truncated column definition handles missing charset, length, and type',
+      () {
+        final writer = ByteDataWriter();
+        // catalog
+        writer.writeVariableEncInt(3);
+        writer.write([0x64, 0x65, 0x66]); // "def"
+        // schema
+        writer.writeVariableEncInt(0);
+        // table
+        writer.writeVariableEncInt(0);
+        // orgTable
+        writer.writeVariableEncInt(0);
+        // name
+        writer.writeVariableEncInt(4);
+        writer.write([0x74, 0x65, 0x73, 0x74]); // "test"
+        // orgName
+        writer.writeVariableEncInt(0);
+        // length of fixed fields: 0x0c (12)
+        writer.writeVariableEncInt(12);
+        // Buffer ends right here (truncated before charset, length, type)
+        final buffer = writer.toBytes();
+
+        final col = MySQLColumnDefinitionPacket.decode(buffer);
+        check(col.name).equals('test');
+        check(col.charset).equals(0);
+        check(col.columnLength).equals(0);
+        check(col.type).equals(MySQLColumnType.decimalType); // type 0
+      },
+    );
   });
 }
