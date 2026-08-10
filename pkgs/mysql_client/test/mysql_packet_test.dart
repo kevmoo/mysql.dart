@@ -28,6 +28,12 @@ void main() {
         check(actual.$1.toInt()).equals(250);
         check(actual.$2).equals(1);
       });
+      test('decoding NULL int value 0xfb', () {
+        var buff = ByteData.sublistView(Uint8List.fromList([0xfb]));
+        var actual = buff.getVariableEncInt(0);
+        check(actual.$1.toInt()).equals(-1);
+        check(actual.$2).equals(1);
+      });
     });
 
     group('test decoding two byte ints', () {

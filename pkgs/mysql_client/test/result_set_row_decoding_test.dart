@@ -120,5 +120,29 @@ void main() {
 
       check(row.values.first).isA<Uint8List>().deepEquals([0xde, 0xad]);
     });
+
+    test('testing textual row NULL JSON column decoding', () {
+      final writer = ByteDataWriter();
+      writer.writeUint8(0xfb); // NULL value marker
+      final buffer = writer.toBytes();
+
+      final colDefs = <MySQLColumnDefinitionPacket>[
+        MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'test',
+          table: 'test',
+          orgTable: 'test',
+          name: 'col',
+          orgName: 'col',
+          charset: 63,
+          columnLength: 100,
+          type: MySQLColumnType.jsonType,
+        ),
+      ];
+
+      final row = MySQLResultSetRowPacket.decode(buffer, 1, colDefs);
+
+      check(row.values.first).isNull();
+    });
   });
 }

@@ -52,13 +52,17 @@ class MySQLColumnDefinitionPacket extends MySQLPacketPayload {
     final lengthOfFixedLengthFields = byteData.getVariableEncInt(offset);
     offset += lengthOfFixedLengthFields.$2;
 
-    final charset = byteData.getUint16(offset, Endian.little);
+    final charset = (offset + 2 <= buffer.length)
+        ? byteData.getUint16(offset, Endian.little)
+        : 0;
     offset += 2;
 
-    final columnLength = byteData.getUint32(offset, Endian.little);
+    final columnLength = (offset + 4 <= buffer.length)
+        ? byteData.getUint32(offset, Endian.little)
+        : 0;
     offset += 4;
 
-    final type = byteData.getUint8(offset);
+    final type = (offset < buffer.length) ? byteData.getUint8(offset) : 0;
     offset += 1;
 
     return MySQLColumnDefinitionPacket(

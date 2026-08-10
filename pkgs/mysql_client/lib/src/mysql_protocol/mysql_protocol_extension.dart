@@ -21,52 +21,69 @@ extension MySQLUint8ListExtension on Uint8List {
   }
 
   (String, int) getUtf8LengthEncodedString(int startOffset) {
-    final tmp = Uint8List.sublistView(this, startOffset);
-    final bd = ByteData.sublistView(tmp);
+    if (startOffset >= length) {
+      return ('', 0);
+    }
+    final bd = ByteData.sublistView(this, startOffset);
 
     final strLength = bd.getVariableEncInt(0);
+    if (strLength.$1 < BigInt.zero) {
+      return ('', strLength.$2);
+    }
 
-    final tmp2 = Uint8List.sublistView(
-      tmp,
-      strLength.$2,
-      strLength.$2 + strLength.$1.toInt(),
-    );
+    final len = strLength.$1.toInt();
+    final dataStart = startOffset + strLength.$2;
+    final dataEnd = (dataStart + len).clamp(dataStart, length);
 
-    return (utf8.decode(tmp2), strLength.$2 + strLength.$1.toInt());
+    final tmp2 = Uint8List.sublistView(this, dataStart, dataEnd);
+    return (utf8.decode(tmp2), strLength.$2 + len);
   }
 
   (Uint8List, int) getLengthEncodedBytes(int startOffset) {
-    final tmp = Uint8List.sublistView(this, startOffset);
-    final bd = ByteData.sublistView(tmp);
+    if (startOffset >= length) {
+      return (Uint8List(0), 0);
+    }
+    final bd = ByteData.sublistView(this, startOffset);
 
     final strLength = bd.getVariableEncInt(0);
+    if (strLength.$1 < BigInt.zero) {
+      return (Uint8List(0), strLength.$2);
+    }
 
-    final tmp2 = Uint8List.sublistView(
-      tmp,
-      strLength.$2,
-      strLength.$2 + strLength.$1.toInt(),
-    );
+    final len = strLength.$1.toInt();
+    final dataStart = startOffset + strLength.$2;
+    final dataEnd = (dataStart + len).clamp(dataStart, length);
 
+    final tmp2 = Uint8List.sublistView(this, dataStart, dataEnd);
     final resultBytes = tmp2.length <= 64 ? Uint8List.fromList(tmp2) : tmp2;
-    return (resultBytes, strLength.$2 + strLength.$1.toInt());
+    return (resultBytes, strLength.$2 + len);
   }
 }
 
 extension MySQLByteDataExtension on ByteData {
   (BigInt, int) getVariableEncInt(int startOffset) {
+    if (startOffset >= lengthInBytes) {
+      return (BigInt.from(-1), 0);
+    }
     final firstByte = getUint8(startOffset);
 
     if (firstByte < 0xfb) {
       return (BigInt.from(firstByte), 1);
     }
 
+    if (firstByte == 0xfb) {
+      return (BigInt.from(-1), 1);
+    }
+
     if (firstByte == 0xfc) {
+      if (startOffset + 2 >= lengthInBytes) return (BigInt.from(-1), 1);
       final value =
           getUint8(startOffset + 1) | (getUint8(startOffset + 2) << 8);
       return (BigInt.from(value), 3);
     }
 
     if (firstByte == 0xfd) {
+      if (startOffset + 3 >= lengthInBytes) return (BigInt.from(-1), 1);
       final value =
           getUint8(startOffset + 1) |
           (getUint8(startOffset + 2) << 8) |
@@ -75,6 +92,7 @@ extension MySQLByteDataExtension on ByteData {
     }
 
     if (firstByte == 0xfe) {
+      if (startOffset + 8 >= lengthInBytes) return (BigInt.from(-1), 1);
       final lowValue =
           getUint8(startOffset + 1) |
           (getUint8(startOffset + 2) << 8) |
