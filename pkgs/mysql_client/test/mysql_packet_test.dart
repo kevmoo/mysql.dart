@@ -165,27 +165,27 @@ void main() {
         check(actual2.$2).equals(0);
       });
 
-      test('truncated 0xfc 2-byte int returns -1, 1', () {
+      test('truncated 0xfc 2-byte int returns -1, 0', () {
         var buff = ByteData.sublistView(Uint8List.fromList([0xfc, 0x01]));
         var actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(-1);
-        check(actual.$2).equals(1);
+        check(actual.$2).equals(0);
       });
 
-      test('truncated 0xfd 3-byte int returns -1, 1', () {
+      test('truncated 0xfd 3-byte int returns -1, 0', () {
         var buff = ByteData.sublistView(Uint8List.fromList([0xfd, 0x01, 0x02]));
         var actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(-1);
-        check(actual.$2).equals(1);
+        check(actual.$2).equals(0);
       });
 
-      test('truncated 0xfe 8-byte int returns -1, 1', () {
+      test('truncated 0xfe 8-byte int returns -1, 0', () {
         var buff = ByteData.sublistView(
           Uint8List.fromList([0xfe, 0x01, 0x02, 0x03, 0x04]),
         );
         var actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(-1);
-        check(actual.$2).equals(1);
+        check(actual.$2).equals(0);
       });
     });
 

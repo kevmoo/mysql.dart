@@ -76,14 +76,13 @@ extension MySQLByteDataExtension on ByteData {
     }
 
     if (firstByte == 0xfc) {
-      if (startOffset + 2 >= lengthInBytes) return (BigInt.from(-1), 1);
-      final value =
-          getUint8(startOffset + 1) | (getUint8(startOffset + 2) << 8);
+      if (startOffset + 3 > lengthInBytes) return (BigInt.from(-1), 0);
+      final value = getUint16(startOffset + 1, Endian.little);
       return (BigInt.from(value), 3);
     }
 
     if (firstByte == 0xfd) {
-      if (startOffset + 3 >= lengthInBytes) return (BigInt.from(-1), 1);
+      if (startOffset + 4 > lengthInBytes) return (BigInt.from(-1), 0);
       final value =
           getUint8(startOffset + 1) |
           (getUint8(startOffset + 2) << 8) |
@@ -92,20 +91,9 @@ extension MySQLByteDataExtension on ByteData {
     }
 
     if (firstByte == 0xfe) {
-      if (startOffset + 8 >= lengthInBytes) return (BigInt.from(-1), 1);
-      final lowValue =
-          getUint8(startOffset + 1) |
-          (getUint8(startOffset + 2) << 8) |
-          (getUint8(startOffset + 3) << 16) |
-          (getUint8(startOffset + 4) << 24);
-      final highValue =
-          getUint8(startOffset + 5) |
-          (getUint8(startOffset + 6) << 8) |
-          (getUint8(startOffset + 7) << 16) |
-          (getUint8(startOffset + 8) << 24);
-      final value = BigInt.from(lowValue) | (BigInt.from(highValue) << 32);
-
-      return (value, 9);
+      if (startOffset + 9 > lengthInBytes) return (BigInt.from(-1), 0);
+      final value = getUint64(startOffset + 1, Endian.little);
+      return (BigInt.from(value), 9);
     }
 
     throw const MySQLProtocolException(
@@ -121,7 +109,7 @@ extension MySQLByteDataExtension on ByteData {
     return bd.getUint16(0, Endian.little);
   }
 
-  int getInt3(int startOffset) {
+  int getInt32(int startOffset) {
     final bd = ByteData(4);
     bd.setUint8(0, getUint8(startOffset));
     bd.setUint8(1, getUint8(startOffset + 1));
@@ -134,19 +122,22 @@ extension MySQLByteDataExtension on ByteData {
 
 extension MySQLByteWriterExtension on ByteDataWriter {
   void writeVariableEncInt(int value) {
+    if (value < 0) {
+      throw ArgumentError.value(value, 'value', 'Cannot be negative');
+    }
     if (value < 251) {
       writeUint8(value);
-    } else if (value >= 251 && value < 65536) {
+    } else if (value < 65536) {
       writeUint8(0xfc);
-      writeInt16(value);
-    } else if (value >= 65536 && value < 16777216) {
+      writeUint16(value);
+    } else if (value < 16777216) {
       writeUint8(0xfd);
       final bd = ByteData(4);
-      bd.setInt32(0, value, Endian.little);
+      bd.setUint32(0, value, Endian.little);
       write(bd.buffer.asUint8List().sublist(0, 3));
-    } else if (value >= 16777216) {
+    } else {
       writeUint8(0xfe);
-      writeInt64(value);
+      writeUint64(value);
     }
   }
 }
