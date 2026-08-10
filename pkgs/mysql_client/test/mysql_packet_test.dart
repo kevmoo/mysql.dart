@@ -791,6 +791,31 @@ void main() {
       final payload = packet.payload as MySQLPacketOK;
       check(payload.header).equals(0x00);
       check(payload.affectedRows.toInt()).equals(0);
+      check(payload.statusFlags).equals(2);
+      check(payload.hasMoreResults).equals(false);
+      check(payload.warnings).equals(0);
+    });
+
+    test('testing response ok packet with SERVER_MORE_RESULTS_EXISTS', () {
+      // header: 0x00, affectedRows: 1, lastInsertID: 42, statusFlags: 0x0008 (SERVER_MORE_RESULTS_EXISTS), warnings: 1
+      final writer = ByteDataWriter(endian: Endian.little);
+      writer.writeUint8(0x00); // header
+      writer.writeVariableEncInt(1); // affected rows: 1
+      writer.writeVariableEncInt(42); // last insert ID: 42
+      writer.writeUint16(
+        0x0008,
+      ); // status flags (SERVER_MORE_RESULTS_EXISTS = 0x0008)
+      writer.writeUint16(1); // warnings: 1
+
+      final payloadBytes = writer.toBytes();
+      final packet = MySQLPacketOK.decode(payloadBytes);
+
+      check(packet.header).equals(0x00);
+      check(packet.affectedRows.toInt()).equals(1);
+      check(packet.lastInsertID.toInt()).equals(42);
+      check(packet.statusFlags).equals(0x0008);
+      check(packet.hasMoreResults).equals(true);
+      check(packet.warnings).equals(1);
     });
 
     test('testing stmt prepare ok packet decoding (standard and Apache Doris truncated)', () {
