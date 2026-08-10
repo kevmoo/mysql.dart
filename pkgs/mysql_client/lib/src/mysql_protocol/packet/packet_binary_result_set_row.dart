@@ -53,8 +53,7 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
         values.add(null);
       } else {
         final (val, len) = parseBinaryColumnData(
-          colDefs[x].type,
-          colDefs[x].charset,
+          colDefs[x],
           byteData,
           buffer,
           offset,

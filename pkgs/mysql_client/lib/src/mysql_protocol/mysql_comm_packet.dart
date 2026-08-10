@@ -114,7 +114,11 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
         if (param != null) {
           if (type != null) {
             buffer.writeUint8(type);
+          } else if (param is bool) {
+            buffer.writeUint8(MySQLColumnType.tinyType);
           } else if (param is int) {
+            buffer.writeUint8(MySQLColumnType.longLongType);
+          } else if (param is BigInt) {
             buffer.writeUint8(MySQLColumnType.longLongType);
           } else if (param is double) {
             buffer.writeUint8(MySQLColumnType.doubleType);
@@ -128,7 +132,7 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
             buffer.writeUint8(MySQLColumnType.varStringType);
           }
           // unsigned flag
-          buffer.writeUint8(0);
+          buffer.writeUint8(param is BigInt ? 0x80 : 0);
         } else {
           buffer.writeUint8(MySQLColumnType.nullType);
           buffer.writeUint8(0);
@@ -139,7 +143,9 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
         final param = params[i];
         final type = paramTypes?[i];
         if (param != null) {
-          if (type == MySQLColumnType.tinyType && param is int) {
+          if (param is bool) {
+            buffer.writeUint8(param ? 1 : 0);
+          } else if (type == MySQLColumnType.tinyType && param is int) {
             buffer.writeInt8(param);
           } else if (type == MySQLColumnType.shortType && param is int) {
             buffer.writeInt16(param, Endian.little);
@@ -149,6 +155,8 @@ class MySQLPacketCommStmtExecute extends MySQLPacketPayload {
             buffer.writeInt32(param, Endian.little);
           } else if (type == MySQLColumnType.longLongType && param is int) {
             buffer.writeInt64(param, Endian.little);
+          } else if (param is BigInt) {
+            buffer.writeUint64(param.toUnsigned(64).toInt());
           } else if (type == MySQLColumnType.floatType && param is num) {
             buffer.writeFloat32(param.toDouble(), Endian.little);
           } else if (type == MySQLColumnType.doubleType && param is num) {
