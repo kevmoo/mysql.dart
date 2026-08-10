@@ -444,8 +444,8 @@ create table book
 
   test('testing multiple statements (DML -> DML)', () async {
     final resultSets = await conn.execute(
-      "INSERT INTO book (title, price) VALUES ('DML 1', 10); "
-      "INSERT INTO book (title, price) VALUES ('DML 2', 20);",
+      "INSERT INTO book (title, price, created_at) VALUES ('DML 1', 10, NOW()); "
+      "INSERT INTO book (title, price, created_at) VALUES ('DML 2', 20, NOW());",
     );
 
     check(resultSets).isA<EmptyResultSet>();
@@ -467,7 +467,7 @@ create table book
 
   test('testing multiple statements (DML -> SELECT -> DML)', () async {
     final resultSets = await conn.execute(
-      "INSERT INTO book (title, price) VALUES ('DML 3', 30); "
+      "INSERT INTO book (title, price, created_at) VALUES ('DML 3', 30, NOW()); "
       "SELECT title, price FROM book WHERE title = 'DML 3'; "
       "UPDATE book SET price = 35 WHERE title = 'DML 3';",
     );
