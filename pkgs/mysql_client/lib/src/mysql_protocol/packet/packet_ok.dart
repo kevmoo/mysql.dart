@@ -7,12 +7,19 @@ class MySQLPacketOK extends MySQLPacketPayload {
   int header;
   BigInt affectedRows;
   BigInt lastInsertID;
+  int statusFlags;
+  int warnings;
 
   MySQLPacketOK({
     required this.header,
     required this.affectedRows,
     required this.lastInsertID,
+    this.statusFlags = 0,
+    this.warnings = 0,
   });
+
+  bool get hasMoreResults =>
+      (statusFlags & mysqlServerFlagMoreResultsExists) != 0;
 
   factory MySQLPacketOK.decode(Uint8List buffer) {
     final byteData = ByteData.sublistView(buffer);
@@ -27,10 +34,22 @@ class MySQLPacketOK extends MySQLPacketPayload {
     final lastInsertID = byteData.getVariableEncInt(offset);
     offset += lastInsertID.$2;
 
+    final statusFlags = (offset + 2 <= buffer.length)
+        ? byteData.getUint16(offset, Endian.little)
+        : 0;
+    offset += 2;
+
+    final warnings = (offset + 2 <= buffer.length)
+        ? byteData.getUint16(offset, Endian.little)
+        : 0;
+    offset += 2;
+
     return MySQLPacketOK(
       header: header,
       affectedRows: affectedRows.$1,
       lastInsertID: lastInsertID.$1,
+      statusFlags: statusFlags,
+      warnings: warnings,
     );
   }
 

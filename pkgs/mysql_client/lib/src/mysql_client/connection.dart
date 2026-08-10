@@ -675,12 +675,28 @@ class MySQLConnection {
             if (MySQLPacket.detectPacketType(data) ==
                 MySQLGenericPacketType.ok) {
               final okPacket = MySQLPacket.decodeGenericPacket(data);
-              _state = _MySQLConnectionState.connectionEstablished;
-              completer.complete(
-                EmptyResultSet(okPacket: okPacket.payload as MySQLPacketOK),
-              );
+              final okPayload = okPacket.payload as MySQLPacketOK;
+              final emptyResultSet = EmptyResultSet(okPacket: okPayload);
 
-              return;
+              if (currentResultSet != null) {
+                currentResultSet!.next = emptyResultSet;
+              } else {
+                firstResultSet = emptyResultSet;
+              }
+              currentResultSet = emptyResultSet;
+
+              if (okPayload.hasMoreResults) {
+                state = _ResultSetState.initial;
+                colsCount = 0;
+                colDefs = [];
+                resultSetRows = [];
+                return;
+              } else {
+                state = _ResultSetState.rowsParsed;
+                _state = _MySQLConnectionState.connectionEstablished;
+                completer.complete(firstResultSet);
+                return;
+              }
             }
 
             packet = MySQLPacket.decodeColumnCountPacket(data);
@@ -706,11 +722,21 @@ class MySQLConnection {
               // check eof
               if (MySQLPacket.detectPacketType(data) ==
                   MySQLGenericPacketType.eof) {
-                state = _ResultSetState.rowsParsed;
+                final eofPacket = MySQLPacket.decodeGenericPacket(data);
+                final eofPayload = eofPacket.payload as MySQLPacketEOF;
 
-                _state = _MySQLConnectionState.connectionEstablished;
-                await sink!.close();
-                return;
+                if (eofPayload.statusFlags & mysqlServerFlagMoreResultsExists !=
+                    0) {
+                  state = _ResultSetState.initial;
+                  colsCount = 0;
+                  colDefs = [];
+                  return;
+                } else {
+                  state = _ResultSetState.rowsParsed;
+                  _state = _MySQLConnectionState.connectionEstablished;
+                  await sink!.close();
+                  return;
+                }
               }
 
               packet = MySQLPacket.decodeResultSetRowPacket(

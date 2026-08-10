@@ -427,7 +427,7 @@ create table book
     await stmt.deallocate();
   });
 
-  test('testing multiple statements', () async {
+  test('testing multiple statements (SELECT -> SELECT)', () async {
     final resultSets = await conn.execute(
       'SELECT 1 as val_1_1; SELECT 2 as val_2_1, 3 as val_2_2',
     );
@@ -440,6 +440,58 @@ create table book
     check(resultSetsList[0].rows.first.colByName('val_1_1')).equals('1');
     check(resultSetsList[1].rows.first.colByName('val_2_1')).equals('2');
     check(resultSetsList[1].rows.first.colByName('val_2_2')).equals('3');
+  });
+
+  test('testing multiple statements (DML -> DML)', () async {
+    final resultSets = await conn.execute(
+      "INSERT INTO book (title, price) VALUES ('DML 1', 10); "
+      "INSERT INTO book (title, price) VALUES ('DML 2', 20);",
+    );
+
+    check(resultSets).isA<EmptyResultSet>();
+    check(resultSets.affectedRows.toInt()).equals(1);
+    check(resultSets.next).isNotNull();
+
+    final nextResult = resultSets.next!;
+    check(nextResult).isA<EmptyResultSet>();
+    check(nextResult.affectedRows.toInt()).equals(1);
+    check(nextResult.next).isNull();
+
+    // Verify socket synchronization with subsequent query
+    final checkQuery = await conn.execute(
+      "SELECT title FROM book WHERE title IN ('DML 1', 'DML 2') ORDER BY title",
+    );
+    check(checkQuery.numOfRows).equals(2);
+    check(checkQuery.rows.first.colByName('title')).equals('DML 1');
+  });
+
+  test('testing multiple statements (DML -> SELECT -> DML)', () async {
+    final resultSets = await conn.execute(
+      "INSERT INTO book (title, price) VALUES ('DML 3', 30); "
+      "SELECT title, price FROM book WHERE title = 'DML 3'; "
+      "UPDATE book SET price = 35 WHERE title = 'DML 3';",
+    );
+
+    final resultsList = resultSets.toList();
+    check(resultsList.length).equals(3);
+
+    // 1st: INSERT (EmptyResultSet)
+    check(resultsList[0]).isA<EmptyResultSet>();
+    check(resultsList[0].affectedRows.toInt()).equals(1);
+
+    // 2nd: SELECT (ResultSet)
+    check(resultsList[1]).isA<ResultSet>();
+    check(resultsList[1].numOfRows).equals(1);
+    check(resultsList[1].rows.first.colByName('title')).equals('DML 3');
+    check(resultsList[1].rows.first.colByName('price')).equals('30');
+
+    // 3rd: UPDATE (EmptyResultSet)
+    check(resultsList[2]).isA<EmptyResultSet>();
+    check(resultsList[2].affectedRows.toInt()).equals(1);
+
+    // Verify socket synchronization with subsequent query
+    final syncCheck = await conn.execute('SELECT 42 as sync_val');
+    check(syncCheck.rows.first.colByName('sync_val')).equals('42');
   });
 
   test('testing column types mapping', () async {
