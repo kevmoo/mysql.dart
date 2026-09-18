@@ -572,7 +572,8 @@ create table book
       check(typedAssoc['col_pk'].runtimeType).equals(int);
       check(typedAssoc['col_bit']).isBinaryOrString();
       check(typedAssoc['col_tinyint'].runtimeType).equals(int);
-      check([bool, int]).contains(typedAssoc['col_bool'].runtimeType);
+      check([bool, int])
+          .contains((typedAssoc['col_bool'] as Object?).runtimeType);
       check(typedAssoc['col_smallint'].runtimeType).equals(int);
       check(typedAssoc['col_mediumint'].runtimeType).equals(int);
       check(typedAssoc['col_int'].runtimeType).equals(int);
@@ -624,7 +625,8 @@ create table book
     for (var row in groupedResponse.rows) {
       var typedAssoc = row.typedAssoc();
       check(typedAssoc['col_pk'].runtimeType).equals(int);
-      check([String, double]).contains(typedAssoc['sum_int'].runtimeType);
+      check([String, double])
+          .contains((typedAssoc['sum_int'] as Object?).runtimeType);
       check(typedAssoc['max_int'].runtimeType).equals(int);
       check(typedAssoc['sum_double'].runtimeType).equals(double);
     }
