@@ -59,6 +59,9 @@ class MySQLPacket {
   });
 
   static int getPacketLength(Uint8List buffer) {
+    if (buffer.length < 3) {
+      throw const MySQLProtocolException('Truncated packet header');
+    }
     // payloadLength
     var db = ByteData(4)
       ..setUint8(0, buffer[0])
@@ -72,6 +75,9 @@ class MySQLPacket {
   }
 
   static (int, int) decodePacketHeader(Uint8List buffer) {
+    if (buffer.length < 4) {
+      throw const MySQLProtocolException('Truncated packet header');
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
@@ -92,6 +98,9 @@ class MySQLPacket {
   }
 
   static MySQLGenericPacketType detectPacketType(Uint8List buffer) {
+    if (buffer.length < 5) {
+      return MySQLGenericPacketType.other;
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
@@ -133,6 +142,11 @@ class MySQLPacket {
   }
 
   factory MySQLPacket.decodeAuthSwitchRequestPacket(Uint8List buffer) {
+    if (buffer.length < 5) {
+      throw const MySQLProtocolException(
+        'Can not decode AuthSwitchResponse packet: buffer is too short',
+      );
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
@@ -161,6 +175,9 @@ class MySQLPacket {
   }
 
   factory MySQLPacket.decodeGenericPacket(Uint8List buffer) {
+    if (buffer.length < 5) {
+      throw MySQLProtocolException('Unsupported generic packet: $buffer');
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
@@ -197,6 +214,9 @@ class MySQLPacket {
   }
 
   factory MySQLPacket.decodeColumnCountPacket(Uint8List buffer) {
+    if (buffer.length < 5) {
+      throw const MySQLProtocolException('Truncated column count packet');
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
@@ -212,6 +232,9 @@ class MySQLPacket {
     if (type == 0x00) {
       // OK packet
       payload = MySQLPacketOK.decode(Uint8List.sublistView(buffer, offset));
+    } else if (type == 0xfe && payloadLength < 9) {
+      // EOF packet
+      payload = MySQLPacketEOF.decode(Uint8List.sublistView(buffer, offset));
     } else if (type == 0xff) {
       payload = MySQLPacketError.decode(Uint8List.sublistView(buffer, offset));
     } else if (type == 0xfb) {
@@ -299,6 +322,11 @@ class MySQLPacket {
   }
 
   factory MySQLPacket.decodeCommPrepareStmtResponsePacket(Uint8List buffer) {
+    if (buffer.length < 5) {
+      throw const MySQLProtocolException(
+        'Truncated COM_STMT_PREPARE response packet',
+      );
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 

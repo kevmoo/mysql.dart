@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../exception.dart';
 import '../mysql_packet.dart';
 import '../mysql_protocol_extension.dart';
 
@@ -10,6 +11,11 @@ class MySQLPacketExtraAuthData extends MySQLPacketPayload {
   MySQLPacketExtraAuthData({required this.header, required this.pluginData});
 
   factory MySQLPacketExtraAuthData.decode(Uint8List buffer) {
+    if (buffer.isEmpty) {
+      throw const MySQLProtocolException(
+        'Truncated MySQLPacketExtraAuthData: empty buffer',
+      );
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 

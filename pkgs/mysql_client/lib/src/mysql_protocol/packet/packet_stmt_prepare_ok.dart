@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../exception.dart';
 import '../mysql_packet.dart';
 
 class MySQLPacketStmtPrepareOK extends MySQLPacketPayload {
@@ -18,6 +19,11 @@ class MySQLPacketStmtPrepareOK extends MySQLPacketPayload {
   });
 
   factory MySQLPacketStmtPrepareOK.decode(Uint8List buffer) {
+    if (buffer.length < 9) {
+      throw const MySQLProtocolException(
+        'Truncated MySQLPacketStmtPrepareOK: buffer length < 9',
+      );
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 

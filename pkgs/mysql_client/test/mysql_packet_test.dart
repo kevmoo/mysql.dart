@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 import 'package:checks/checks.dart';
 import 'package:hex/hex.dart';
+import 'package:mysql_client/mysql_client.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol_extension.dart';
 import 'package:test/scaffolding.dart';
@@ -226,11 +227,18 @@ void main() {
         ]); // "abcd"
         final (str, len) = buffer.getUtf8LengthEncodedString(0);
         check(str).equals('abcd');
-        check(len).equals(51); // 1 header byte + 50 claimed bytes
+        check(len).equals(5); // 1 header byte + 4 available bytes
 
         final (bytes, bLen) = buffer.getLengthEncodedBytes(0);
         check(bytes).deepEquals([0x61, 0x62, 0x63, 0x64]);
-        check(bLen).equals(51);
+        check(bLen).equals(5);
+      });
+
+      test('un-terminated null-terminated string clamps to buffer length', () {
+        final buffer = Uint8List.fromList([0x61, 0x62]);
+        final (str, len) = buffer.getUtf8NullTerminatedString(0);
+        check(str).equals('ab');
+        check(len).equals(2);
       });
     });
 
@@ -875,6 +883,88 @@ void main() {
       final oneBytePkt = MySQLPacketStmtPrepareOK.decode(oneByteBuffer);
       check(oneBytePkt.numOfWarnings).equals(0);
     });
+
+    test('detectPacketType returns other for < 5 byte packets', () {
+      check(MySQLPacket.detectPacketType(Uint8List(0)))
+          .equals(MySQLGenericPacketType.other);
+      check(MySQLPacket.detectPacketType(Uint8List.fromList([0, 0, 0, 0])))
+          .equals(MySQLGenericPacketType.other);
+    });
+
+    test(
+      'truncated packets throw MySQLProtocolException instead of RangeError',
+      () {
+        check(() => MySQLPacket.getPacketLength(Uint8List.fromList([0, 0])))
+            .throws<MySQLProtocolException>();
+        check(
+          () => MySQLPacket.decodePacketHeader(Uint8List.fromList([0, 0, 0])),
+        ).throws<MySQLProtocolException>();
+        check(
+          () =>
+              MySQLPacket.decodeGenericPacket(Uint8List.fromList([0, 0, 0, 0])),
+        ).throws<MySQLProtocolException>();
+        check(
+          () => MySQLPacket.decodeColumnCountPacket(
+            Uint8List.fromList([0, 0, 0, 0]),
+          ),
+        ).throws<MySQLProtocolException>();
+        check(
+          MySQLPacket.decodeColumnCountPacket(
+            Uint8List.fromList([1, 0, 0, 1, 0xfe]),
+          ).payload,
+        ).isA<MySQLPacketEOF>();
+        check(
+          () => MySQLPacket.decodeColumnCountPacket(
+            Uint8List.fromList([1, 0, 0, 1, 0xfb]),
+          ),
+        ).throws<MySQLProtocolException>();
+        check(() => MySQLPacketInitialHandshake.decode(Uint8List(0)))
+            .throws<MySQLProtocolException>();
+        check(
+          () => MySQLPacketInitialHandshake.decode(
+            Uint8List.fromList([10, 0x35, 0x00, 1, 2]),
+          ),
+        ).throws<MySQLProtocolException>();
+        check(() => MySQLPacketOK.decode(Uint8List(0)))
+            .throws<MySQLProtocolException>();
+        check(() => MySQLPacketError.decode(Uint8List.fromList([0xff, 0x01])))
+            .throws<MySQLProtocolException>();
+        check(() => MySQLPacketEOF.decode(Uint8List(0)))
+            .throws<MySQLProtocolException>();
+        check(MySQLPacketEOF.decode(Uint8List.fromList([0xfe])).statusFlags)
+            .equals(0);
+        check(
+          () => MySQLPacketStmtPrepareOK.decode(Uint8List.fromList([0, 1, 2])),
+        ).throws<MySQLProtocolException>();
+
+        final colDef = MySQLColumnDefinitionPacket(
+          catalog: 'def',
+          schema: 'test',
+          table: 't',
+          orgTable: 't',
+          name: 'c',
+          orgName: 'c',
+          charset: 33,
+          columnLength: 11,
+          type: MySQLColumnType.longType,
+        );
+        check(
+          () => MySQLBinaryResultSetRowPacket.decode(Uint8List(0), [colDef]),
+        ).throws<MySQLProtocolException>();
+        check(
+          () => MySQLBinaryResultSetRowPacket.decode(
+            Uint8List.fromList([0x00]),
+            [colDef],
+          ),
+        ).throws<MySQLProtocolException>();
+        check(
+          () => MySQLBinaryResultSetRowPacket.decode(
+            Uint8List.fromList([0x00, 0x00, 0x01]),
+            [colDef],
+          ),
+        ).throws<MySQLProtocolException>();
+      },
+    );
   });
 
   group('testing COM_STMT_EXECUTE packet encoding', () {

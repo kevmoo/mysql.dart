@@ -193,7 +193,13 @@ extension type const MySQLColumnType(int _) implements int {
   };
 }
 
-(Object, int) parseBinaryColumnData(
+void _requireBinaryBytes(ByteData data, int offset, int count) {
+  if (offset < 0 || offset + count > data.lengthInBytes) {
+    throw const MySQLProtocolException('Truncated binary column data');
+  }
+}
+
+(Object?, int) parseBinaryColumnData(
   MySQLColumnDefinitionPacket colDef,
   ByteData data,
   Uint8List buffer,
@@ -205,25 +211,30 @@ extension type const MySQLColumnType(int _) implements int {
 
   switch (MySQLColumnType(columnType)) {
     case MySQLColumnType.tinyType:
+      _requireBinaryBytes(data, startOffset, 1);
       final value = isUnsigned
           ? data.getUint8(startOffset)
           : data.getInt8(startOffset);
       return (value.toString(), 1);
     case MySQLColumnType.shortType:
+      _requireBinaryBytes(data, startOffset, 2);
       final value = isUnsigned
           ? data.getUint16(startOffset, Endian.little)
           : data.getInt16(startOffset, Endian.little);
       return (value.toString(), 2);
     case MySQLColumnType.yearType:
+      _requireBinaryBytes(data, startOffset, 2);
       final value = data.getUint16(startOffset, Endian.little);
       return (value.toString(), 2);
     case MySQLColumnType.longType:
     case MySQLColumnType.int24Type:
+      _requireBinaryBytes(data, startOffset, 4);
       final value = isUnsigned
           ? data.getUint32(startOffset, Endian.little)
           : data.getInt32(startOffset, Endian.little);
       return (value.toString(), 4);
     case MySQLColumnType.longLongType:
+      _requireBinaryBytes(data, startOffset, 8);
       if (isUnsigned) {
         final raw = data.getInt64(startOffset, Endian.little);
         final value = BigInt.from(raw).toUnsigned(64);
@@ -233,129 +244,20 @@ extension type const MySQLColumnType(int _) implements int {
         return (value.toString(), 8);
       }
     case MySQLColumnType.floatType:
+      _requireBinaryBytes(data, startOffset, 4);
       final value = data.getFloat32(startOffset, Endian.little);
       return (value.toString(), 4);
     case MySQLColumnType.doubleType:
+      _requireBinaryBytes(data, startOffset, 8);
       final value = data.getFloat64(startOffset, Endian.little);
       return (value.toString(), 8);
 
     case MySQLColumnType.dateType:
     case MySQLColumnType.dateTimeType:
     case MySQLColumnType.timestampType:
-      final initialOffset = startOffset;
-
-      // read number of bytes (0, 4, 7, 11)
-      final numOfBytes = data.getUint8(startOffset);
-      startOffset += 1;
-
-      if (numOfBytes == 0) {
-        return const ('0000-00-00 00:00:00', 1);
-      }
-
-      var year = 0;
-      var month = 0;
-      var day = 0;
-      var hour = 0;
-      var minute = 0;
-      var second = 0;
-      var microSecond = 0;
-
-      if (numOfBytes >= 4) {
-        year = data.getUint16(startOffset, Endian.little);
-        startOffset += 2;
-
-        month = data.getUint8(startOffset);
-        startOffset += 1;
-
-        day = data.getUint8(startOffset);
-        startOffset += 1;
-      }
-
-      if (numOfBytes >= 7) {
-        hour = data.getUint8(startOffset);
-        startOffset += 1;
-
-        minute = data.getUint8(startOffset);
-        startOffset += 1;
-
-        second = data.getUint8(startOffset);
-        startOffset += 1;
-      }
-
-      if (numOfBytes >= 11) {
-        microSecond = data.getUint32(startOffset, Endian.little);
-        startOffset += 4;
-      }
-
-      final result = StringBuffer();
-      result.write('$year-');
-      result.write('${month.toString().padLeft(2, '0')}-');
-      result.write(day.toString().padLeft(2, '0'));
-      if (numOfBytes >= 7) {
-        result.write(' ');
-        result.write('${hour.toString().padLeft(2, '0')}:');
-        result.write('${minute.toString().padLeft(2, '0')}:');
-        result.write(second.toString().padLeft(2, '0'));
-      }
-      if (numOfBytes >= 11) {
-        result.write('.${microSecond.toString().padLeft(6, '0')}');
-      }
-
-      return (result.toString(), startOffset - initialOffset);
+      return _parseBinaryDateTime(data, startOffset);
     case MySQLColumnType.timeType:
-      final initialOffset = startOffset;
-
-      // read number of bytes (0, 8, 12)
-      final numOfBytes = data.getUint8(startOffset);
-      startOffset += 1;
-
-      if (numOfBytes == 0) {
-        return const ('00:00:00', 1);
-      }
-
-      var isNegative = false;
-      var days = 0;
-      var hours = 0;
-      var minutes = 0;
-      var seconds = 0;
-      var microSecond = 0;
-
-      if (numOfBytes >= 8) {
-        isNegative = data.getUint8(startOffset) > 0;
-        startOffset += 1;
-
-        days = data.getUint32(startOffset, Endian.little);
-        startOffset += 4;
-
-        hours = data.getUint8(startOffset);
-        startOffset += 1;
-
-        minutes = data.getUint8(startOffset);
-        startOffset += 1;
-
-        seconds = data.getUint8(startOffset);
-        startOffset += 1;
-      }
-
-      if (numOfBytes >= 12) {
-        microSecond = data.getUint32(startOffset, Endian.little);
-        startOffset += 4;
-      }
-
-      hours += days * 24;
-
-      final result = StringBuffer();
-      if (isNegative) {
-        result.write('-');
-      }
-      result.write('${hours.toString().padLeft(2, '0')}:');
-      result.write('${minutes.toString().padLeft(2, '0')}:');
-      result.write(seconds.toString().padLeft(2, '0'));
-      if (numOfBytes >= 12) {
-        result.write('.${microSecond.toString().padLeft(6, '0')}');
-      }
-
-      return (result.toString(), startOffset - initialOffset);
+      return _parseBinaryTime(data, startOffset);
     case MySQLColumnType.stringType:
     case MySQLColumnType.varStringType:
     case MySQLColumnType.varCharType:
@@ -373,7 +275,7 @@ extension type const MySQLColumnType(int _) implements int {
       final type = MySQLColumnType(columnType);
       if (type == MySQLColumnType.jsonType) {
         final (val, len) = buffer.getUtf8LengthEncodedString(startOffset);
-        return (jsonDecode(val), len);
+        return (val.isNotEmpty ? jsonDecode(val) : null, len);
       }
       if (type == MySQLColumnType.bitType || type.isBinary(charset)) {
         return buffer.getLengthEncodedBytes(startOffset);
@@ -384,4 +286,106 @@ extension type const MySQLColumnType(int _) implements int {
   throw MySQLProtocolException(
     'Can not parse binary column data: column type $columnType is not implemented',
   );
+}
+
+(String, int) _parseBinaryDateTime(ByteData data, int startOffset) {
+  _requireBinaryBytes(data, startOffset, 1);
+  final initialOffset = startOffset;
+
+  // read number of bytes (0, 4, 7, 11)
+  final numOfBytes = data.getUint8(startOffset);
+  startOffset += 1;
+
+  if (numOfBytes == 0) {
+    return const ('0000-00-00 00:00:00', 1);
+  }
+  if (numOfBytes != 4 && numOfBytes != 7 && numOfBytes != 11) {
+    throw MySQLProtocolException('Invalid binary datetime length: $numOfBytes');
+  }
+  _requireBinaryBytes(data, startOffset, numOfBytes);
+
+  final year = data.getUint16(startOffset, Endian.little);
+  final month = data.getUint8(startOffset + 2);
+  final day = data.getUint8(startOffset + 3);
+  startOffset += 4;
+
+  var hour = 0;
+  var minute = 0;
+  var second = 0;
+  var microSecond = 0;
+
+  if (numOfBytes >= 7) {
+    hour = data.getUint8(startOffset);
+    minute = data.getUint8(startOffset + 1);
+    second = data.getUint8(startOffset + 2);
+    startOffset += 3;
+  }
+
+  if (numOfBytes >= 11) {
+    microSecond = data.getUint32(startOffset, Endian.little);
+    startOffset += 4;
+  }
+
+  final result = StringBuffer()
+    ..write('$year-')
+    ..write('${month.toString().padLeft(2, '0')}-')
+    ..write(day.toString().padLeft(2, '0'));
+  if (numOfBytes >= 7) {
+    result
+      ..write(' ')
+      ..write('${hour.toString().padLeft(2, '0')}:')
+      ..write('${minute.toString().padLeft(2, '0')}:')
+      ..write(second.toString().padLeft(2, '0'));
+  }
+  if (numOfBytes >= 11) {
+    result.write('.${microSecond.toString().padLeft(6, '0')}');
+  }
+
+  return (result.toString(), startOffset - initialOffset);
+}
+
+(String, int) _parseBinaryTime(ByteData data, int startOffset) {
+  _requireBinaryBytes(data, startOffset, 1);
+  final initialOffset = startOffset;
+
+  // read number of bytes (0, 8, 12)
+  final numOfBytes = data.getUint8(startOffset);
+  startOffset += 1;
+
+  if (numOfBytes == 0) {
+    return const ('00:00:00', 1);
+  }
+  if (numOfBytes != 8 && numOfBytes != 12) {
+    throw MySQLProtocolException('Invalid binary time length: $numOfBytes');
+  }
+  _requireBinaryBytes(data, startOffset, numOfBytes);
+
+  final isNegative = data.getUint8(startOffset) > 0;
+  final days = data.getUint32(startOffset + 1, Endian.little);
+  var hours = data.getUint8(startOffset + 5);
+  final minutes = data.getUint8(startOffset + 6);
+  final seconds = data.getUint8(startOffset + 7);
+  startOffset += 8;
+
+  var microSecond = 0;
+  if (numOfBytes >= 12) {
+    microSecond = data.getUint32(startOffset, Endian.little);
+    startOffset += 4;
+  }
+
+  hours += days * 24;
+
+  final result = StringBuffer();
+  if (isNegative) {
+    result.write('-');
+  }
+  result
+    ..write('${hours.toString().padLeft(2, '0')}:')
+    ..write('${minutes.toString().padLeft(2, '0')}:')
+    ..write(seconds.toString().padLeft(2, '0'));
+  if (numOfBytes >= 12) {
+    result.write('.${microSecond.toString().padLeft(6, '0')}');
+  }
+
+  return (result.toString(), startOffset - initialOffset);
 }
