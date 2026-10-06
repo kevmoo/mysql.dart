@@ -15,6 +15,6 @@ jobs:
   fuzz:
     uses: kevmoo/fuzz.dart/.github/workflows/fuzz.yaml@main
     with:
-      working-directory: pkgs/mysql_client
-      targets: test/fuzz/mysql_packet_fuzz.dart
+      package-root: pkgs/mysql_client
+      target: test/fuzz/mysql_packet_fuzz.dart
       max-total-time: ${{ github.event_name == 'schedule' && 300 || 30 }}
