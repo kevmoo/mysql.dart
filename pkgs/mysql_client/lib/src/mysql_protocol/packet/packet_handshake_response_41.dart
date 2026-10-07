@@ -48,12 +48,16 @@ class MySQLPacketHandshakeResponse41 extends MySQLPacketPayload {
 
     assert(challenge.length == 20);
 
-    final passwordBytes = utf8.encode(password);
-
-    final authData = xor(
-      sha1(passwordBytes),
-      sha1(challenge + sha1(sha1(passwordBytes))),
-    );
+    final Uint8List authData;
+    if (password.isEmpty) {
+      authData = Uint8List(0);
+    } else {
+      final passwordBytes = utf8.encode(password);
+      authData = xor(
+        sha1(passwordBytes),
+        sha1(challenge + sha1(sha1(passwordBytes))),
+      );
+    }
 
     return MySQLPacketHandshakeResponse41(
       capabilityFlags: _supportedCapabitilies,
