@@ -14,6 +14,11 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
     Uint8List buffer,
     List<MySQLColumnDefinitionPacket> colDefs,
   ) {
+    if (buffer.isEmpty) {
+      throw const MySQLProtocolException(
+        'Can not decode MySQLBinaryResultSetRowPacket: empty buffer',
+      );
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
@@ -31,6 +36,11 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
 
     // parse null bitmap
     var nullBitmapSize = ((colDefs.length + 9) / 8).floor();
+    if (offset + nullBitmapSize > buffer.length) {
+      throw const MySQLProtocolException(
+        'Can not decode MySQLBinaryResultSetRowPacket: truncated null bitmap',
+      );
+    }
 
     final nullBitmap = Uint8List.sublistView(
       buffer,

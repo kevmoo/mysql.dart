@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import '../../exception.dart';
 import '../mysql_packet.dart';
 import '../mysql_protocol_extension.dart';
 
@@ -28,6 +29,11 @@ class MySQLPacketInitialHandshake extends MySQLPacketPayload {
   });
 
   factory MySQLPacketInitialHandshake.decode(Uint8List buffer) {
+    if (buffer.isEmpty) {
+      throw const MySQLProtocolException(
+        'Truncated MySQLPacketInitialHandshake: empty buffer',
+      );
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 
@@ -38,6 +44,12 @@ class MySQLPacketInitialHandshake extends MySQLPacketPayload {
     // server version
     final serverVersion = buffer.getUtf8NullTerminatedString(offset);
     offset += serverVersion.$2;
+
+    if (offset + 31 > buffer.length) {
+      throw const MySQLProtocolException(
+        'Truncated MySQLPacketInitialHandshake: insufficient fixed fields',
+      );
+    }
 
     // connection id
     final connectionID = byteData.getUint32(offset, Endian.little);
@@ -87,6 +99,11 @@ class MySQLPacketInitialHandshake extends MySQLPacketPayload {
 
     if (capabilityFlags & mysqlCapFlagClientSecureConnection != 0) {
       int length = max(13, authPluginDataLength - 8);
+      if (offset + length > buffer.length) {
+        throw const MySQLProtocolException(
+          'Truncated MySQLPacketInitialHandshake: insufficient authPluginDataPart2',
+        );
+      }
 
       authPluginDataPart2 = Uint8List.sublistView(
         buffer,

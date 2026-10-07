@@ -7,21 +7,30 @@ import '../exception.dart';
 
 extension MySQLUint8ListExtension on Uint8List {
   (String, int) getUtf8NullTerminatedString(int startOffset) {
-    final tmp = Uint8List.sublistView(
-      this,
-      startOffset,
-    ).takeWhile((value) => value != 0);
-
-    return (utf8.decode(tmp.toList()), tmp.length + 1);
+    if (startOffset < 0 || startOffset >= length) {
+      return ('', 0);
+    }
+    var endOffset = startOffset;
+    while (endOffset < length && this[endOffset] != 0) {
+      endOffset++;
+    }
+    final tmp = Uint8List.sublistView(this, startOffset, endOffset);
+    final consumed = endOffset < length
+        ? (endOffset - startOffset + 1)
+        : (endOffset - startOffset);
+    return (utf8.decode(tmp), consumed);
   }
 
   String getUtf8StringEOF(int startOffset) {
+    if (startOffset < 0 || startOffset >= length) {
+      return '';
+    }
     final tmp = Uint8List.sublistView(this, startOffset);
     return utf8.decode(tmp);
   }
 
   (String, int) getUtf8LengthEncodedString(int startOffset) {
-    if (startOffset >= length) {
+    if (startOffset < 0 || startOffset >= length) {
       return ('', 0);
     }
     final bd = ByteData.sublistView(this, startOffset);
@@ -31,16 +40,19 @@ extension MySQLUint8ListExtension on Uint8List {
       return ('', strLength.$2);
     }
 
-    final len = strLength.$1.toInt();
     final dataStart = startOffset + strLength.$2;
-    final dataEnd = (dataStart + len).clamp(dataStart, length);
+    final maxLen = length - dataStart;
+    final actualLen = strLength.$1 > BigInt.from(maxLen)
+        ? maxLen
+        : strLength.$1.toInt();
+    final dataEnd = dataStart + actualLen;
 
     final tmp2 = Uint8List.sublistView(this, dataStart, dataEnd);
-    return (utf8.decode(tmp2), strLength.$2 + len);
+    return (utf8.decode(tmp2), strLength.$2 + actualLen);
   }
 
   (Uint8List, int) getLengthEncodedBytes(int startOffset) {
-    if (startOffset >= length) {
+    if (startOffset < 0 || startOffset >= length) {
       return (Uint8List(0), 0);
     }
     final bd = ByteData.sublistView(this, startOffset);
@@ -50,19 +62,22 @@ extension MySQLUint8ListExtension on Uint8List {
       return (Uint8List(0), strLength.$2);
     }
 
-    final len = strLength.$1.toInt();
     final dataStart = startOffset + strLength.$2;
-    final dataEnd = (dataStart + len).clamp(dataStart, length);
+    final maxLen = length - dataStart;
+    final actualLen = strLength.$1 > BigInt.from(maxLen)
+        ? maxLen
+        : strLength.$1.toInt();
+    final dataEnd = dataStart + actualLen;
 
     final tmp2 = Uint8List.sublistView(this, dataStart, dataEnd);
     final resultBytes = tmp2.length <= 64 ? Uint8List.fromList(tmp2) : tmp2;
-    return (resultBytes, strLength.$2 + len);
+    return (resultBytes, strLength.$2 + actualLen);
   }
 }
 
 extension MySQLByteDataExtension on ByteData {
   (BigInt, int) getVariableEncInt(int startOffset) {
-    if (startOffset >= lengthInBytes) {
+    if (startOffset < 0 || startOffset >= lengthInBytes) {
       return (BigInt.from(-1), 0);
     }
     final firstByte = getUint8(startOffset);
@@ -92,8 +107,9 @@ extension MySQLByteDataExtension on ByteData {
 
     if (firstByte == 0xfe) {
       if (startOffset + 9 > lengthInBytes) return (BigInt.from(-1), 0);
-      final value = getUint64(startOffset + 1, Endian.little);
-      return (BigInt.from(value), 9);
+      final raw = getInt64(startOffset + 1, Endian.little);
+      final value = BigInt.from(raw).toUnsigned(64);
+      return (value, 9);
     }
 
     throw const MySQLProtocolException(
@@ -102,6 +118,11 @@ extension MySQLByteDataExtension on ByteData {
   }
 
   int getInt2(int startOffset) {
+    if (startOffset < 0 || startOffset + 2 > lengthInBytes) {
+      throw const MySQLProtocolException(
+        'Truncated buffer while decoding getInt2',
+      );
+    }
     final bd = ByteData(2);
     bd.setUint8(0, getUint8(startOffset));
     bd.setUint8(1, getUint8(startOffset + 1));
@@ -110,6 +131,11 @@ extension MySQLByteDataExtension on ByteData {
   }
 
   int getInt32(int startOffset) {
+    if (startOffset < 0 || startOffset + 3 > lengthInBytes) {
+      throw const MySQLProtocolException(
+        'Truncated buffer while decoding getInt32',
+      );
+    }
     final bd = ByteData(4);
     bd.setUint8(0, getUint8(startOffset));
     bd.setUint8(1, getUint8(startOffset + 1));

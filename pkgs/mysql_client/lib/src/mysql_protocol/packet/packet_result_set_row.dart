@@ -23,7 +23,7 @@ class MySQLResultSetRowPacket extends MySQLPacketPayload {
     final values = <Object?>[];
 
     for (var x = 0; x < numOfCols; x++) {
-      if (offset >= buffer.length) {
+      if (offset >= buffer.length || x >= colDefs.length) {
         values.add(null);
         continue;
       }

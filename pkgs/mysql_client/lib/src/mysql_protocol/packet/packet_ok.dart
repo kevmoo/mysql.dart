@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../exception.dart';
 import '../mysql_packet.dart';
 import '../mysql_protocol_extension.dart';
 
@@ -22,6 +23,11 @@ class MySQLPacketOK extends MySQLPacketPayload {
       (statusFlags & mysqlServerFlagMoreResultsExists) != 0;
 
   factory MySQLPacketOK.decode(Uint8List buffer) {
+    if (buffer.isEmpty) {
+      throw const MySQLProtocolException(
+        'Truncated MySQLPacketOK: empty buffer',
+      );
+    }
     final byteData = ByteData.sublistView(buffer);
     var offset = 0;
 

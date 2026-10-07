@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../exception.dart';
 import '../mysql_packet.dart';
 import '../mysql_protocol_extension.dart';
 
@@ -15,6 +16,11 @@ class MySQLPacketError extends MySQLPacketPayload {
   });
 
   factory MySQLPacketError.decode(Uint8List buffer) {
+    if (buffer.length < 3) {
+      throw const MySQLProtocolException(
+        'Truncated MySQLPacketError: buffer length < 3',
+      );
+    }
     final byteData = ByteData.sublistView(buffer);
 
     var offset = 0;
