@@ -1097,6 +1097,41 @@ void main() {
       },
     );
 
+    test('MySQLPacketHandshakeResponse41 handles empty passwords', () {
+      final initial = MySQLPacketInitialHandshake(
+        protocolVersion: 10,
+        serverVersion: '8.0.0',
+        connectionID: 1,
+        authPluginDataPart1: Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8]),
+        capabilityFlags: 0,
+        characterSet: 33,
+        statusFlags: 0,
+        authPluginDataPart2: Uint8List.fromList([
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+        ]),
+        authPluginName: 'caching_sha2_password',
+      );
+
+      final response = MySQLPacketHandshakeResponse41.create(
+        initialHandshakePayload: initial,
+        username: 'root',
+        password: '',
+      );
+
+      check(response.authResponse).isEmpty();
+    });
+
     test('testing MySQLPacketExtraAuthDataResponse appendNullByte control', () {
       final data = Uint8List.fromList([1, 2, 3]);
       final withNull = MySQLPacketExtraAuthDataResponse(data: data).encode();
