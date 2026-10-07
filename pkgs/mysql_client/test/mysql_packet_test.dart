@@ -1104,8 +1104,8 @@ void main() {
         connectionID: 1,
         authPluginDataPart1: Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8]),
         capabilityFlags: 0,
-        characterSet: 33,
-        statusFlags: 0,
+        charset: 33,
+        statusFlags: Uint8List.fromList([0, 0]),
         authPluginDataPart2: Uint8List.fromList([
           9,
           10,
@@ -1123,13 +1123,21 @@ void main() {
         authPluginName: 'caching_sha2_password',
       );
 
-      final response = MySQLPacketHandshakeResponse41.create(
-        initialHandshakePayload: initial,
-        username: 'root',
-        password: '',
-      );
+      final nativeResponse =
+          MySQLPacketHandshakeResponse41.createWithNativePassword(
+            initialHandshakePayload: initial,
+            username: 'root',
+            password: '',
+          );
+      check(nativeResponse.authResponse).isEmpty();
 
-      check(response.authResponse).isEmpty();
+      final sha2Response =
+          MySQLPacketHandshakeResponse41.createWithCachingSha2Password(
+            initialHandshakePayload: initial,
+            username: 'root',
+            password: '',
+          );
+      check(sha2Response.authResponse).isEmpty();
     });
 
     test('testing MySQLPacketExtraAuthDataResponse appendNullByte control', () {
