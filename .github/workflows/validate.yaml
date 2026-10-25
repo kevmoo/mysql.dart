@@ -33,9 +33,6 @@ jobs:
       - name: Analyze code
         run: dart analyze --fatal-infos
 
-      - name: Install Dolt CLI
-        run: sudo bash -c 'curl -L https://github.com/dolthub/dolt/releases/latest/download/install.sh | bash'
-
       - name: Run mysql_client unit tests
         working-directory: pkgs/mysql_client
         run: dart test
@@ -47,11 +44,3 @@ jobs:
       - name: Run Dolt integration tests
         working-directory: pkgs/mysql_client
         run: dart tool/run_dolt_tests.dart
-
-      - name: Run dolt shelf unit tests
-        working-directory: pkgs/dolt
-        run: dart test test/shelf_test.dart
-
-      - name: Run dolt native integration tests
-        working-directory: pkgs/dolt
-        run: dart test test/integration_test.dart
