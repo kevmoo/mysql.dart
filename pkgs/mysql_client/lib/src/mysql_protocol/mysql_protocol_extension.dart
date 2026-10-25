@@ -130,10 +130,10 @@ extension MySQLByteDataExtension on ByteData {
     return bd.getUint16(0, Endian.little);
   }
 
-  int getInt32(int startOffset) {
+  int getInt3(int startOffset) {
     if (startOffset < 0 || startOffset + 3 > lengthInBytes) {
       throw const MySQLProtocolException(
-        'Truncated buffer while decoding getInt32',
+        'Truncated buffer while decoding getInt3',
       );
     }
     final bd = ByteData(4);

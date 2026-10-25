@@ -81,8 +81,8 @@ create table book
       final localConn = await MySQLConnection.createConnection(
         host: host,
         port: port,
-        userName: 'fake',
-        password: 'fake',
+        userName: 'fake_non_existent_user',
+        password: '',
         secure: secure,
       );
 

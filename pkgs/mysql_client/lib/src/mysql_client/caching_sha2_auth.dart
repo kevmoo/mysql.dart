@@ -12,7 +12,7 @@ class RSAPublicKey {
 }
 
 RSAPublicKey parsePemPublicKey(String pem) {
-  var base64str = pem
+  final base64str = pem
       .split('\n')
       .where(
         (l) =>
@@ -23,13 +23,13 @@ RSAPublicKey parsePemPublicKey(String pem) {
       .join('')
       .replaceAll(RegExp(r'[^A-Za-z0-9+/=]'), '');
 
-  var bytes = base64Decode(base64str);
+  final bytes = base64Decode(base64str);
   var offset = 0;
 
   int readLength() {
     var len = bytes[offset++];
     if (len & 0x80 != 0) {
-      var count = len & 0x7F;
+      final count = len & 0x7F;
       len = 0;
       for (var i = 0; i < count; i++) {
         len = (len << 8) | bytes[offset++];
@@ -49,7 +49,7 @@ RSAPublicKey parsePemPublicKey(String pem) {
 
     // AlgorithmIdentifier (SEQUENCE)
     verifyTag(0x30);
-    var algLen = readLength();
+    final algLen = readLength();
     offset += algLen; // skip algorithm identifier
 
     // subjectPublicKey (BIT STRING)
@@ -64,18 +64,18 @@ RSAPublicKey parsePemPublicKey(String pem) {
 
     // modulus (INTEGER)
     verifyTag(0x02);
-    var modLen = readLength();
-    var modulusBytes = bytes.sublist(offset, offset + modLen);
+    final modLen = readLength();
+    final modulusBytes = bytes.sublist(offset, offset + modLen);
     offset += modLen;
 
     // exponent (INTEGER)
     verifyTag(0x02);
-    var expLen = readLength();
-    var exponentBytes = bytes.sublist(offset, offset + expLen);
+    final expLen = readLength();
+    final exponentBytes = bytes.sublist(offset, offset + expLen);
     offset += expLen;
 
     BigInt toBigInt(Uint8List b) {
-      var hex = b.map((e) => e.toRadixString(16).padLeft(2, '0')).join('');
+      final hex = b.map((e) => e.toRadixString(16).padLeft(2, '0')).join('');
       return BigInt.parse(hex, radix: 16);
     }
 

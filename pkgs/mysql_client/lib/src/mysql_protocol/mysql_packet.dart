@@ -63,7 +63,7 @@ class MySQLPacket {
       throw const MySQLProtocolException('Truncated packet header');
     }
     // payloadLength
-    var db = ByteData(4)
+    final db = ByteData(4)
       ..setUint8(0, buffer[0])
       ..setUint8(1, buffer[1])
       ..setUint8(2, buffer[2])
@@ -82,7 +82,7 @@ class MySQLPacket {
     var offset = 0;
 
     // payloadLength
-    var db = ByteData(4)
+    final db = ByteData(4)
       ..setUint8(0, buffer[0])
       ..setUint8(1, buffer[1])
       ..setUint8(2, buffer[2])
@@ -415,10 +415,10 @@ Uint8List xor(List<int> aList, List<int> bList) {
     );
   }
 
-  var aIsBigger = a.lengthInBytes > b.lengthInBytes;
-  var length = aIsBigger ? a.lengthInBytes : b.lengthInBytes;
+  final aIsBigger = a.lengthInBytes > b.lengthInBytes;
+  final length = aIsBigger ? a.lengthInBytes : b.lengthInBytes;
 
-  var buffer = Uint8List(length);
+  final buffer = Uint8List(length);
 
   for (var i = 0; i < length; i++) {
     int aa, bb;
