@@ -33,7 +33,7 @@ void main() {
 
       final row = MySQLResultSetRowPacket.decode(buffer, 1, colDefs);
 
-      check(row.values.first).isA<Map>().deepEquals({'a': 1});
+      check(row.values.first).isA<Map<String, Object?>>().deepEquals({'a': 1});
     });
 
     test('testing binary row JSON decoding', () {
@@ -63,7 +63,7 @@ void main() {
 
       final row = MySQLBinaryResultSetRowPacket.decode(buffer, colDefs);
 
-      check(row.values.first).isA<Map>().deepEquals({'b': 2});
+      check(row.values.first).isA<Map<String, Object?>>().deepEquals({'b': 2});
     });
 
     test('testing textual row BIT column decoding', () {

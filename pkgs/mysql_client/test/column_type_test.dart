@@ -341,8 +341,9 @@ void main() {
         .equals('{"key": "value"}');
 
     final mapValue = <String, dynamic>{'key': 'value'};
-    check(sqlType.convertStringValueToProvidedType<Map>(mapValue))
-        .equals(mapValue);
+    check(
+      sqlType.convertStringValueToProvidedType<Map<String, dynamic>>(mapValue),
+    ).equals(mapValue);
 
     check(
       () => sqlType.convertStringValueToProvidedType<int>('{"key": "value"}'),

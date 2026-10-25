@@ -1,13 +1,12 @@
 include: package:dart_flutter_team_lints/analysis_options.yaml
 
 analyzer:
-  errors: 
+  errors:
     lines_longer_than_80_chars: ignore
-    undefined_lint: ignore
-
+  language:
+    strict-raw-types: true
 
 linter:
   rules:
     - simple_directive_paths
-    - unnecessary_const_in_enum_constructor
     - unnecessary_ignore

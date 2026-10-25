@@ -9,7 +9,6 @@ on:
 
 jobs:
   validate:
-    name: Validate (${{ matrix.sdk }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
