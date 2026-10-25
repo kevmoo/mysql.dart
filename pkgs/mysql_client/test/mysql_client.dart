@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:checks/checks.dart';
 import 'package:mysql_client/mysql_client.dart';
 import 'package:test/scaffolding.dart';
-import 'package:test/test.dart' show fail;
 
 extension BinaryOrStringSubject on Subject<Object?> {
   void isBinaryOrString() =>
@@ -77,21 +76,15 @@ create table book
   });
 
   test('testing bad connection', () async {
-    try {
-      final localConn = await MySQLConnection.createConnection(
-        host: host,
-        port: port,
-        userName: 'fake_non_existent_user',
-        password: '',
-        secure: secure,
-      );
+    final localConn = await MySQLConnection.createConnection(
+      host: host,
+      port: port,
+      userName: 'fake_non_existent_user',
+      password: '',
+      secure: secure,
+    );
 
-      await localConn.connect();
-
-      fail('Not thrown');
-    } catch (e) {
-      check(e).isA<MySQLServerException>();
-    }
+    await check(localConn.connect()).throws<MySQLServerException>();
   });
 
   test('testing insert', () async {
@@ -187,18 +180,14 @@ create table book
   });
 
   test('testing error is thrown if syntax error', () async {
-    try {
-      await conn.execute('SELECT * FROM book WHERES ASD id = :id', {'id': 1});
-
-      fail('Exception is not thrown');
-    } catch (e) {
-      check(e).isA<MySQLServerException>();
-    }
+    await check(
+      conn.execute('SELECT * FROM book WHERES ASD id = :id', {'id': 1}),
+    ).throws<MySQLServerException>();
   });
 
   test('testing error is thrown if null passed for not-null column', () async {
-    try {
-      await conn.execute(
+    await check(
+      conn.execute(
         'INSERT INTO book (author_id, title, price, created_at, some_time) VALUES (:author, :title, :price, :created, :time)',
         {
           'author': null,
@@ -207,20 +196,14 @@ create table book
           'created': '2020-01-01 01:00:15',
           'time': '01:15:25',
         },
-      );
-      fail('Exception is not thrown');
-    } catch (e) {
-      check(e).isA<MySQLServerException>();
-    }
+      ),
+    ).throws<MySQLServerException>();
   });
 
   test('testing error is thrown if syntax error in prepared stmt', () async {
-    try {
-      await conn.prepare('INSERT INTO book (author_id, title) VA_LUESD (?, ?)');
-      fail('Exception is not thrown');
-    } catch (e) {
-      check(e).isA<MySQLServerException>();
-    }
+    await check(
+      conn.prepare('INSERT INTO book (author_id, title) VA_LUESD (?, ?)'),
+    ).throws<MySQLServerException>();
   });
 
   test('testing delete', () async {
@@ -286,44 +269,35 @@ create table book
   });
 
   test('testing double transaction', () async {
-    try {
-      await conn.transactional<void>((conn) async {
-        await conn.execute('SELECT * FROM book');
-      });
-      await conn.transactional<void>((conn) async {
-        await conn.execute('SELECT * FROM book');
-      });
-    } catch (e) {
-      fail('Exception is thrown');
-    }
+    await conn.transactional<void>((conn) async {
+      await conn.execute('SELECT * FROM book');
+    });
+    await conn.transactional<void>((conn) async {
+      await conn.execute('SELECT * FROM book');
+    });
   });
 
   test('testing error is thrown if prevent double transaction', () async {
-    try {
-      await Future.wait([
+    await check(
+      Future.wait([
         conn.transactional<void>((conn) async {
           await conn.execute('SELECT * FROM book');
         }),
         conn.transactional<void>((conn) async {
           await conn.execute('SELECT * FROM book');
         }),
-      ]);
-      fail('Exception is not thrown');
-    } catch (e) {
-      check(e).isA<MySQLClientException>();
-      check(e.toString())
-          .equals('MySQLClientException: Already in transaction');
-    }
+      ]),
+    ).throws<MySQLClientException>(
+      (it) => it
+          .has((e) => e.toString(), 'toString')
+          .equals('MySQLClientException: Already in transaction'),
+    );
   });
 
   test('testing missing param', () async {
-    try {
-      await conn.execute('SELECT * FROM book WHERE id = :id', {'foo': 'bar'});
-
-      fail('Exception is not thrown');
-    } catch (e) {
-      check(e).isA<MySQLClientException>();
-    }
+    await check(
+      conn.execute('SELECT * FROM book WHERE id = :id', {'foo': 'bar'}),
+    ).throws<MySQLClientException>();
   });
 
   test('testing prepared statement', () async {
@@ -352,12 +326,8 @@ create table book
     await stmt.deallocate();
 
     // check throws error
-    try {
-      result = await stmt.execute(['Some title 2', 200, '2022-04-02 00:00:00']);
-      fail('Not thrown');
-    } catch (e) {
-      check(e).isA<MySQLServerException>();
-    }
+    await check(stmt.execute(['Some title 2', 200, '2022-04-02 00:00:00']))
+        .throws<MySQLServerException>();
 
     // check rows
     result = await conn.execute('SELECT COUNT(id) FROM book');
@@ -365,23 +335,23 @@ create table book
   });
 
   test('testing string encoding in prepared statements', () async {
-    var stmt = await conn.prepare(
+    final stmt = await conn.prepare(
       'INSERT INTO book (author_id, title, price, created_at) VALUES (?, ?, ?, ?)',
     );
 
-    var result = await stmt.execute([null, '中文标题', 120, '2022-01-01']);
+    final result = await stmt.execute([null, '中文标题', 120, '2022-01-01']);
     await stmt.deallocate();
 
     check(result.affectedRows.toInt()).equals(1);
   });
 
   test('testing DateTime encoding in prepared statements', () async {
-    var stmt = await conn.prepare(
+    final stmt = await conn.prepare(
       'INSERT INTO book (author_id, title, price, created_at) VALUES (?, ?, ?, ?)',
     );
 
     final utcDate = DateTime.utc(2026, 6, 10, 15, 45, 0);
-    var result = await stmt.execute([null, 'DateTime Title', 150, utcDate]);
+    final result = await stmt.execute([null, 'DateTime Title', 150, utcDate]);
     await stmt.deallocate();
 
     check(result.affectedRows.toInt()).equals(1);
@@ -495,7 +465,7 @@ create table book
   });
 
   test('testing column types mapping', () async {
-    var tableName = 'column_types_test_123';
+    const tableName = 'column_types_test_123';
     await conn.execute('DROP TABLE IF EXISTS $tableName');
 
     await conn.execute("""
@@ -565,9 +535,9 @@ create table book
         col_longtext = 'test_string',
         col_json = '{"key": "val"}';
         """);
-    var response = await conn.execute('SELECT * FROM $tableName');
-    for (var row in response.rows) {
-      var typedAssoc = row.typedAssoc();
+    final response = await conn.execute('SELECT * FROM $tableName');
+    for (final row in response.rows) {
+      final typedAssoc = row.typedAssoc();
 
       check(typedAssoc['col_pk'].runtimeType).equals(int);
       check(typedAssoc['col_bit']).isBinaryOrString();
@@ -614,7 +584,7 @@ create table book
       check(colJson).isA<Map<String, dynamic>>().deepEquals({'key': 'val'});
     }
 
-    var groupedResponse = await conn.execute('''
+    final groupedResponse = await conn.execute('''
       SELECT
       col_pk,
       SUM(col_int) as sum_int,
@@ -622,8 +592,8 @@ create table book
       SUM(col_double) as sum_double
       FROM $tableName GROUP BY col_pk
       ''');
-    for (var row in groupedResponse.rows) {
-      var typedAssoc = row.typedAssoc();
+    for (final row in groupedResponse.rows) {
+      final typedAssoc = row.typedAssoc();
       check(typedAssoc['col_pk'].runtimeType).equals(int);
       check([String, double])
           .contains((typedAssoc['sum_int'] as Object?).runtimeType);
@@ -632,7 +602,7 @@ create table book
     }
   });
 
-  var stressTestRows = 1000;
+  const stressTestRows = 1000;
   test('stress test: insert $stressTestRows rows', () async {
     await conn.execute('TRUNCATE TABLE book');
 
@@ -649,7 +619,7 @@ create table book
     await stmt.deallocate();
 
     // check rows
-    var result = await conn.execute('SELECT * FROM book', {}, true);
+    final result = await conn.execute('SELECT * FROM book', {}, true);
 
     var receivedRows = 0;
 
