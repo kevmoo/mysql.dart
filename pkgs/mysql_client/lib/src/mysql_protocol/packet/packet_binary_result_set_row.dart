@@ -32,10 +32,10 @@ class MySQLBinaryResultSetRowPacket extends MySQLPacketPayload {
       );
     }
 
-    var values = <Object?>[];
+    final values = <Object?>[];
 
     // parse null bitmap
-    var nullBitmapSize = ((colDefs.length + 9) / 8).floor();
+    final nullBitmapSize = ((colDefs.length + 9) / 8).floor();
     if (offset + nullBitmapSize > buffer.length) {
       throw const MySQLProtocolException(
         'Can not decode MySQLBinaryResultSetRowPacket: truncated null bitmap',

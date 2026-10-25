@@ -3,17 +3,17 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:checks/checks.dart';
-import 'package:hex/hex.dart';
+import 'package:convert/convert.dart';
 import 'package:mysql_client/mysql_client.dart';
 import 'package:test/test.dart';
 
 final initialHandshake = Uint8List.fromList(
-  HEX.decode(
+  hex.decode(
     '4d0000000a352e372e33352d3338007b000000181e73526349597c00ffff080200ffc1150000000000000000000007317a2531721d587825181d006d7973716c5f6e61746976655f70617373776f726400',
   ),
 );
-final okAuth = Uint8List.fromList(HEX.decode('0700000200000002000000'));
-final okQuery = Uint8List.fromList(HEX.decode('0700000100000002000000'));
+final okAuth = Uint8List.fromList(hex.decode('0700000200000002000000'));
+final okQuery = Uint8List.fromList(hex.decode('0700000100000002000000'));
 final stmtPrepareOkWithParams = Uint8List.fromList([
   0x0c,
   0x00,
@@ -59,7 +59,7 @@ final fakeColumnDef = Uint8List.fromList([
 ]);
 final fakeEof = Uint8List.fromList([5, 0, 0, 3, 0xfe, 0, 0, 2, 0]);
 // execute response seq 1
-final okExecute = Uint8List.fromList(HEX.decode('0700000100000002000000'));
+final okExecute = Uint8List.fromList(hex.decode('0700000100000002000000'));
 
 void main() {
   test('LRU auto-prepared statement cache limits testing', () async {
@@ -80,7 +80,7 @@ void main() {
         (Uint8List data) {
           buffer.addAll(data);
           while (buffer.length >= 4) {
-            var packetLen = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16);
+            final packetLen = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16);
             if (buffer.length < packetLen + 4) break;
 
             final cmd = buffer[4];

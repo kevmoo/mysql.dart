@@ -22,7 +22,7 @@ class MySQLPacketExtraAuthData extends MySQLPacketPayload {
     final header = byteData.getUint8(offset);
     offset += 1;
 
-    var pluginData = buffer.getUtf8StringEOF(offset);
+    final pluginData = buffer.getUtf8StringEOF(offset);
 
     return MySQLPacketExtraAuthData(header: header, pluginData: pluginData);
   }

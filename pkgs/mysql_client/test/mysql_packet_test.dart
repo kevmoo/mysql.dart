@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:checks/checks.dart';
-import 'package:hex/hex.dart';
+import 'package:convert/convert.dart';
 import 'package:mysql_client/mysql_client.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol.dart';
 import 'package:mysql_client/src/mysql_protocol/mysql_protocol_extension.dart';
@@ -12,26 +12,26 @@ void main() {
   group('testing variable length int', () {
     group('test decoding one byte ints', () {
       test('decoding int value 16', () {
-        var buff = ByteData.sublistView(Uint8List.fromList([16]));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(Uint8List.fromList([16]));
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(16);
         check(actual.$2).equals(1);
       });
       test('decoding int value 0', () {
-        var buff = ByteData.sublistView(Uint8List.fromList([0]));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(Uint8List.fromList([0]));
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(0);
         check(actual.$2).equals(1);
       });
       test('decoding int value 250', () {
-        var buff = ByteData.sublistView(Uint8List.fromList([250]));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(Uint8List.fromList([250]));
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(250);
         check(actual.$2).equals(1);
       });
       test('decoding NULL int value 0xfb', () {
-        var buff = ByteData.sublistView(Uint8List.fromList([0xfb]));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(Uint8List.fromList([0xfb]));
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(-1);
         check(actual.$2).equals(1);
       });
@@ -39,14 +39,18 @@ void main() {
 
     group('test decoding two byte ints', () {
       test('decoding int value 251', () {
-        var buff = ByteData.sublistView(Uint8List.fromList([0xfc, 0xfb, 0x00]));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(
+          Uint8List.fromList([0xfc, 0xfb, 0x00]),
+        );
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(251);
         check(actual.$2).equals(3);
       });
       test('decoding int value 252', () {
-        var buff = ByteData.sublistView(Uint8List.fromList([0xfc, 0xfc, 0x00]));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(
+          Uint8List.fromList([0xfc, 0xfc, 0x00]),
+        );
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(252);
         check(actual.$2).equals(3);
       });
@@ -54,33 +58,33 @@ void main() {
 
     group('test decoding three byte ints', () {
       test('decoding int value 0', () {
-        var buff = ByteData.sublistView(
+        final buff = ByteData.sublistView(
           Uint8List.fromList([0xfd, 0x00, 0x00, 0x00]),
         );
-        var actual = buff.getVariableEncInt(0);
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(0);
         check(actual.$2).equals(4);
       });
       test('decoding int value 1048576', () {
-        var buff = ByteData.sublistView(
+        final buff = ByteData.sublistView(
           Uint8List.fromList([0xfd, 0x00, 0x00, 0x10]),
         );
-        var actual = buff.getVariableEncInt(0);
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(1048576);
         check(actual.$2).equals(4);
       });
       test('decoding int value 1048613', () {
-        var buff = ByteData.sublistView(
+        final buff = ByteData.sublistView(
           Uint8List.fromList([0xfd, 0x25, 0x00, 0x10]),
         );
-        var actual = buff.getVariableEncInt(0);
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(1048613);
         check(actual.$2).equals(4);
       });
     });
     group('test decoding eight byte ints', () {
       test('decoding int value 0', () {
-        var buff = ByteData.sublistView(
+        final buff = ByteData.sublistView(
           Uint8List.fromList([
             0xfe,
             0x00,
@@ -93,12 +97,12 @@ void main() {
             0x00,
           ]),
         );
-        var actual = buff.getVariableEncInt(0);
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(0);
         check(actual.$2).equals(9);
       });
       test('decoding int value 21', () {
-        var buff = ByteData.sublistView(
+        final buff = ByteData.sublistView(
           Uint8List.fromList([
             0xfe,
             0x15,
@@ -111,12 +115,12 @@ void main() {
             0x00,
           ]),
         );
-        var actual = buff.getVariableEncInt(0);
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(21);
         check(actual.$2).equals(9);
       });
       test('decoding int value 4294967295', () {
-        var buff = ByteData.sublistView(
+        final buff = ByteData.sublistView(
           Uint8List.fromList([
             0xfe,
             0xff,
@@ -129,12 +133,12 @@ void main() {
             0x00,
           ]),
         );
-        var actual = buff.getVariableEncInt(0);
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(4294967295);
         check(actual.$2).equals(9);
       });
       test('decoding int value 1099511627775', () {
-        var buff = ByteData.sublistView(
+        final buff = ByteData.sublistView(
           Uint8List.fromList([
             0xfe,
             0xff,
@@ -147,7 +151,7 @@ void main() {
             0x00,
           ]),
         );
-        var actual = buff.getVariableEncInt(0);
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toString()).equals('1099511627775');
         check(actual.$2).equals(9);
       });
@@ -155,39 +159,55 @@ void main() {
 
     group('test decoding truncated / EOF variable length ints', () {
       test('EOF when startOffset >= lengthInBytes returns -1, 0', () {
-        var buff = ByteData.sublistView(Uint8List(0));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(Uint8List(0));
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(-1);
         check(actual.$2).equals(0);
 
-        var buff2 = ByteData.sublistView(Uint8List.fromList([1, 2, 3]));
-        var actual2 = buff2.getVariableEncInt(3);
+        final buff2 = ByteData.sublistView(Uint8List.fromList([1, 2, 3]));
+        final actual2 = buff2.getVariableEncInt(3);
         check(actual2.$1.toInt()).equals(-1);
         check(actual2.$2).equals(0);
       });
 
       test('truncated 0xfc 2-byte int returns -1, 0', () {
-        var buff = ByteData.sublistView(Uint8List.fromList([0xfc, 0x01]));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(Uint8List.fromList([0xfc, 0x01]));
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(-1);
         check(actual.$2).equals(0);
       });
 
       test('truncated 0xfd 3-byte int returns -1, 0', () {
-        var buff = ByteData.sublistView(Uint8List.fromList([0xfd, 0x01, 0x02]));
-        var actual = buff.getVariableEncInt(0);
+        final buff = ByteData.sublistView(
+          Uint8List.fromList([0xfd, 0x01, 0x02]),
+        );
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(-1);
         check(actual.$2).equals(0);
       });
 
       test('truncated 0xfe 8-byte int returns -1, 0', () {
-        var buff = ByteData.sublistView(
+        final buff = ByteData.sublistView(
           Uint8List.fromList([0xfe, 0x01, 0x02, 0x03, 0x04]),
         );
-        var actual = buff.getVariableEncInt(0);
+        final actual = buff.getVariableEncInt(0);
         check(actual.$1.toInt()).equals(-1);
         check(actual.$2).equals(0);
       });
+
+      test(
+        'getInt2 and getInt3 decode little-endian ints and guard bounds',
+        () {
+          final buff = ByteData.sublistView(
+            Uint8List.fromList([0x34, 0x12, 0x56]),
+          );
+          check(buff.getInt2(0)).equals(0x1234);
+          check(buff.getInt3(0)).equals(0x561234);
+
+          check(() => buff.getInt2(2)).throws<MySQLProtocolException>();
+          check(() => buff.getInt3(1)).throws<MySQLProtocolException>();
+        },
+      );
     });
 
     group('test length-encoded string and byte clamping and bounds safety', () {
@@ -752,7 +772,7 @@ void main() {
   group('testing packets parsing', () {
     test('testing initial handshake packet', () {
       final buffer = Uint8List.fromList(
-        HEX.decode(
+        hex.decode(
           '4d0000000a352e372e33352d3338007b000000181e73526349597c00ffff080200ffc1150000000000000000000007317a2531721d587825181d006d7973716c5f6e61746976655f70617373776f726400',
         ),
       );
@@ -767,9 +787,9 @@ void main() {
       check(payload.serverVersion).equals('5.7.35-38');
       check(payload.connectionID).equals(123);
       check(payload.authPluginDataPart1)
-          .deepEquals(Uint8List.fromList(HEX.decode('181e73526349597c')));
+          .deepEquals(Uint8List.fromList(hex.decode('181e73526349597c')));
       check(payload.authPluginDataPart2).isNotNull().deepEquals(
-        Uint8List.fromList(HEX.decode('07317a2531721d587825181d00')),
+        Uint8List.fromList(hex.decode('07317a2531721d587825181d00')),
       );
 
       check(payload.authPluginName).equals('mysql_native_password');
@@ -788,7 +808,7 @@ void main() {
     });
 
     test('testing response ok packet', () {
-      final buffer = Uint8List.fromList(HEX.decode('0700000200000002000000'));
+      final buffer = Uint8List.fromList(hex.decode('0700000200000002000000'));
       final packet = MySQLPacket.decodeGenericPacket(buffer);
       check(packet.payload).isA<MySQLPacketOK>();
       check(packet.payloadLength).equals(7);
@@ -1138,6 +1158,31 @@ void main() {
             password: '',
           );
       check(sha2Response.authResponse).isEmpty();
+    });
+
+    test('MySQLPacketAuthSwitchResponse handles empty passwords', () {
+      final challenge = Uint8List.fromList(List.generate(20, (i) => i + 1));
+
+      final nativeEmpty =
+          MySQLPacketAuthSwitchResponse.createWithNativePassword(
+            password: '',
+            challenge: challenge,
+          );
+      check(nativeEmpty.authData).isEmpty();
+
+      final sha2Empty =
+          MySQLPacketAuthSwitchResponse.createWithCachingSha2Password(
+            password: '',
+            challenge: challenge,
+          );
+      check(sha2Empty.authData).isEmpty();
+
+      final sha2NonEmpty =
+          MySQLPacketAuthSwitchResponse.createWithCachingSha2Password(
+            password: 'secret',
+            challenge: challenge,
+          );
+      check(sha2NonEmpty.authData.length).equals(32);
     });
 
     test('testing MySQLPacketExtraAuthDataResponse appendNullByte control', () {

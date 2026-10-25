@@ -98,10 +98,11 @@ class MySQLPacketInitialHandshake extends MySQLPacketPayload {
     Uint8List? authPluginDataPart2;
 
     if (capabilityFlags & mysqlCapFlagClientSecureConnection != 0) {
-      int length = max(13, authPluginDataLength - 8);
+      final int length = max(13, authPluginDataLength - 8);
       if (offset + length > buffer.length) {
         throw const MySQLProtocolException(
-          'Truncated MySQLPacketInitialHandshake: insufficient authPluginDataPart2',
+          'Truncated MySQLPacketInitialHandshake: insufficient '
+          'authPluginDataPart2',
         );
       }
 
