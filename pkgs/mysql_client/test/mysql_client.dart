@@ -410,7 +410,7 @@ create table book
     final stmt = await conn.prepare('SELECT CAST(? AS JSON) as col');
     final result = await stmt.execute(['{"key": "val"}']);
     check(result.rows.first.colByName('col'))
-        .isA<Map>()
+        .isA<Map<String, Object?>>()
         .deepEquals({'key': 'val'});
     await stmt.deallocate();
   });
